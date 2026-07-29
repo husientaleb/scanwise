@@ -4,7 +4,7 @@
 // When the app is deployed with an AI key, /api/analyze can replace or
 // enrich this output — both must satisfy validateAnalysis() in schema.js.
 
-import { lookupIngredient, ALLERGEN_KEYWORDS } from './ingredients-db.js';
+import { lookupIngredient, ALLERGEN_KEYWORDS, ALLERGEN_EXCLUSIONS } from './ingredients-db.js';
 import { scoreProduct, nutrientLevel, THRESHOLDS } from './scoring.js';
 import { validateAnalysis, emptyAnalysis } from './schema.js';
 
@@ -75,7 +75,14 @@ export function detectAllergens(text) {
   const lower = (text || '').toLowerCase();
   const found = [];
   for (const [allergen, words] of Object.entries(ALLERGEN_KEYWORDS)) {
-    if (words.some((w) => new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(lower))) {
+    // Strip known dairy-free compounds (e.g. "cocoa butter") before matching
+    // generic keywords (e.g. "butter") so they don't false-positive.
+    let scoped = lower;
+    for (const phrase of ALLERGEN_EXCLUSIONS[allergen] || []) {
+      scoped = scoped.split(phrase).join(' ');
+    }
+    // Allow a trailing plural "s" (almond -> almonds) before the boundary.
+    if (words.some((w) => new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:s?(?:[^a-z]|$))`, 'i').test(scoped))) {
       found.push(allergen);
     }
   }

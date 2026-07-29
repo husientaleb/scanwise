@@ -163,6 +163,28 @@ test('detectAllergens finds tree nuts and wheat, not false positives', () => {
   assert(!found.includes('Fish'), 'no fish');
 });
 
+test('detectAllergens does not flag "eggplant" as containing eggs', () => {
+  const found = detectAllergens('eggplant, olive oil, garlic');
+  assert(!found.includes('Eggs'), 'eggplant should not trigger Eggs');
+});
+
+test('detectAllergens does not flag dairy-free "butter" compounds as milk', () => {
+  const found = detectAllergens('cocoa butter, peanut butter, shea butter');
+  assert(!found.includes('Milk'), 'cocoa/peanut/shea butter should not trigger Milk');
+  assert(found.includes('Peanuts'), 'peanut butter should still trigger Peanuts');
+});
+
+test('detectAllergens does not flag plant milks as dairy', () => {
+  const found = detectAllergens('oat milk, almond milk, coconut milk');
+  assert(!found.includes('Milk'), 'plant milks should not trigger Milk');
+  assert(found.includes('Tree nuts'), 'almond/coconut milk should still trigger Tree nuts');
+});
+
+test('detectAllergens still finds real dairy milk', () => {
+  const found = detectAllergens('whole milk, cream, butter');
+  assert(found.includes('Milk'), 'real dairy should trigger Milk');
+});
+
 // ——— end-to-end analyzer ———
 
 for (const demo of DEMO_PRODUCTS) {

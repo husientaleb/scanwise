@@ -426,6 +426,18 @@ export const ALLERGEN_KEYWORDS = {
   Sesame: ['sesame', 'tahini'],
 };
 
+// Dairy-free compounds that would otherwise false-positive on the generic
+// "milk" / "butter" / "cream" keywords above (e.g. "oat milk" contains no dairy).
+export const ALLERGEN_EXCLUSIONS = {
+  Milk: [
+    'cocoa butter', 'cacao butter', 'peanut butter', 'almond butter', 'cashew butter',
+    'sunflower butter', 'sunflower seed butter', 'shea butter', 'coconut butter',
+    'apple butter', 'mango butter', 'cream of tartar', 'coconut cream',
+    'coconut milk', 'almond milk', 'oat milk', 'soy milk', 'rice milk', 'cashew milk',
+    'hemp milk', 'pea milk', 'macadamia milk', 'flax milk',
+  ],
+};
+
 /**
  * Look up an ingredient by its label text. Returns the best DB entry or null.
  * Longer alias matches win so "corn syrup" beats "corn".
