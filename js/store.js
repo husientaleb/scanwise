@@ -1,0 +1,155 @@
+// store.js — local persistence for guests (localStorage). The shapes mirror
+// the Supabase schema in supabase/schema.sql so registered-user sync can be
+// added later without remodeling.
+
+const KEYS = {
+  scans: 'scanwise.scans.v1',
+  prefs: 'scanwise.prefs.v1',
+  onboarded: 'scanwise.onboarded.v1',
+};
+
+export const DEFAULT_PREFS = {
+  lowerSugar: false,
+  lowerSodium: false,
+  higherProtein: false,
+  higherFiber: false,
+  vegetarian: false,
+  vegan: false,
+  glutenAvoidance: false,
+  dairyAvoidance: false,
+  peanutAllergy: false,
+  treeNutAllergy: false,
+  sesameAllergy: false,
+  avoidArtificialColors: false,
+  avoidIngredients: '',
+};
+
+export const PREF_LABELS = {
+  lowerSugar: 'Lower sugar',
+  lowerSodium: 'Lower sodium',
+  higherProtein: 'Higher protein',
+  higherFiber: 'Higher fiber',
+  vegetarian: 'Vegetarian',
+  vegan: 'Vegan',
+  glutenAvoidance: 'Gluten avoidance',
+  dairyAvoidance: 'Dairy avoidance',
+  peanutAllergy: 'Peanut allergy',
+  treeNutAllergy: 'Tree-nut allergy',
+  sesameAllergy: 'Sesame allergy',
+  avoidArtificialColors: 'Avoid artificial colors',
+};
+
+// Preferences that map onto major-allergen or avoidance alerts in reports.
+export const PREF_ALLERGEN_MAP = {
+  peanutAllergy: 'Peanuts',
+  treeNutAllergy: 'Tree nuts',
+  sesameAllergy: 'Sesame',
+  dairyAvoidance: 'Milk',
+  glutenAvoidance: 'Wheat',
+};
+
+function read(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function write(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    console.warn('Storage write failed (quota?):', err);
+    return false;
+  }
+}
+
+// ——— Scans ———
+
+export function getScans() {
+  return read(KEYS.scans, []);
+}
+
+export function getScan(id) {
+  return getScans().find((s) => s.id === id) || null;
+}
+
+/**
+ * Save a scan record. Shape mirrors the `scans` table:
+ * { id, productName, brand, thumbnail, extracted:{...}, analysis, scoreDetail,
+ *   overallScore, createdAt, isFavorite, demo }
+ */
+export function saveScan(scan) {
+  const scans = getScans().filter((s) => s.id !== scan.id);
+  scans.unshift(scan);
+  // Free tier keeps a bounded history; also protects localStorage quota.
+  const trimmed = scans.slice(0, 50);
+  if (!write(KEYS.scans, trimmed)) {
+    // Retry without thumbnails if quota was hit.
+    write(KEYS.scans, trimmed.map((s) => ({ ...s, thumbnail: null })));
+  }
+  return scan;
+}
+
+export function deleteScan(id) {
+  write(KEYS.scans, getScans().filter((s) => s.id !== id));
+}
+
+/** Remove only the stored image for a scan (privacy control). */
+export function deleteScanImage(id) {
+  const scans = getScans().map((s) => (s.id === id ? { ...s, thumbnail: null } : s));
+  write(KEYS.scans, scans);
+}
+
+export function toggleFavorite(id) {
+  let nowFavorite = false;
+  const scans = getScans().map((s) => {
+    if (s.id === id) {
+      nowFavorite = !s.isFavorite;
+      return { ...s, isFavorite: nowFavorite };
+    }
+    return s;
+  });
+  write(KEYS.scans, scans);
+  return nowFavorite;
+}
+
+export function searchScans(query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return getScans();
+  return getScans().filter((s) =>
+    (s.productName || '').toLowerCase().includes(q) ||
+    (s.brand || '').toLowerCase().includes(q) ||
+    (s.mainConcern || '').toLowerCase().includes(q));
+}
+
+export function clearAllData() {
+  Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+}
+
+// ——— Preferences ———
+
+export function getPrefs() {
+  return { ...DEFAULT_PREFS, ...read(KEYS.prefs, {}) };
+}
+
+export function savePrefs(prefs) {
+  write(KEYS.prefs, { ...getPrefs(), ...prefs });
+}
+
+// ——— Onboarding ———
+
+export function hasOnboarded() {
+  return read(KEYS.onboarded, false) === true;
+}
+
+export function setOnboarded() {
+  write(KEYS.onboarded, true);
+}
+
+export function newId() {
+  return `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
