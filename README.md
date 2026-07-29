@@ -25,6 +25,9 @@ framework-free, and the Supabase schema is ready.
 ```
 index.html            App shell + bottom navigation
 styles.css            Design system (mobile-first, green/blue, rounded cards)
+manifest.webmanifest  PWA manifest (installable on phones)
+sw.js                 Service worker: offline app shell, network-first updates
+icon.svg              App icon
 js/
   main.js             Hash router + session state
   schema.js           Canonical analysis JSON schema + validator (zod-style)
@@ -33,6 +36,7 @@ js/
   scoring.js          Transparent scoring utility (isolated, swappable)
   store.js            localStorage persistence (mirrors the Supabase schema)
   ocr.js              Tesseract.js OCR (on-device) + label sectionizer
+  ai.js               /api/analyze client with automatic local fallback
   demo-data.js        Three fictional demo products
   ui.js               Shared components (badges, score ring, ingredient cards)
   views/              One module per page
@@ -78,7 +82,12 @@ the client.
    ingredients / nutrition heuristically.
 3. **Review** — the user corrects the extracted text before anything is analyzed.
    Unreadable fields stay blank; ScanWise never invents label data.
-4. **Analyze** — `analyzer.js` parses ingredients (knowledge-base lookup),
+4. **Analyze** — the client first tries `/api/analyze` (AI-assisted reading,
+   45 s timeout); on any failure — static hosting, no key, offline, invalid AI
+   JSON — it falls back seamlessly to the on-device engine. **Whichever engine
+   runs, the score is always computed locally by the transparent rubric; the AI
+   explains, it never grades.** Each report shows which engine produced it.
+   Locally, `analyzer.js` parses ingredients (knowledge-base lookup),
    nutrition numbers, and the nine major allergens, then `scoring.js` produces a
    transparent score: start at 7, apply visible adjustments (e.g. "High added
    sugar (14 g): −1.5", "Good fiber: +0.5"), clamp to 1–10. Missing data lowers
@@ -105,9 +114,17 @@ The score is a general nutrition signal and never implies allergy safety.
 - Images are never used for model training (no opt-in exists yet, so: never).
 - Privacy-policy and terms placeholders are included and marked as placeholders.
 
+## PWA & freemium
+
+The app is installable (Add to Home Screen) and opens offline via a
+network-first service worker — bump `CACHE_VERSION` in `sw.js` on breaking
+changes. The free plan tracks 20 scans/month (`store.js`); it's a soft limit
+with a pricing nudge while billing is inert. Reports can be shared/exported as
+plain text via the Web Share API (clipboard fallback).
+
 ## Tests
 
-Open `tests/tests.html` — 20+ assertions covering the scoring rubric, schema
+Open `tests/tests.html` — 30+ assertions covering the scoring rubric, schema
 validation (including rejection of fabricated values and >5 findings), label
 parsing, allergen detection, and end-to-end analysis of the demo products
 (including a "no fear-based language" check).

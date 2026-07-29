@@ -1,12 +1,13 @@
 // home.js — the main dashboard: scan actions, recent scans, demo products.
 
 import { esc, formatDate, scoreColor } from '../ui.js';
-import { getScans } from '../store.js';
+import { getScans, getScanUsage } from '../store.js';
 import { DEMO_PRODUCTS } from '../demo-data.js';
 import { runDemoScan } from './report.js';
 
 export function renderHome(el) {
   const scans = getScans().slice(0, 5);
+  const usage = getScanUsage();
 
   el.innerHTML = `
     <header class="row-between" style="margin-bottom:16px;">
@@ -30,6 +31,17 @@ export function renderHome(el) {
         <a class="btn btn-secondary" style="flex:1;" href="#/scan?mode=upload">Upload Label</a>
         <a class="btn btn-ghost" style="flex:1;" href="#/scan?mode=manual">Enter Manually</a>
       </div>
+      ${usage.count > 0 ? `
+        <div>
+          <div class="row-between small muted" style="margin-bottom:4px;">
+            <span>Free plan: ${usage.count} of ${usage.limit} scans this month</span>
+            ${usage.over ? '<a href="#/pricing">See plans</a>' : ''}
+          </div>
+          <div class="progress-bar" role="progressbar" aria-valuenow="${usage.count}" aria-valuemin="0" aria-valuemax="${usage.limit}" aria-label="Monthly scan usage">
+            <div class="progress-fill" style="width:${Math.min(100, Math.round((usage.count / usage.limit) * 100))}%"></div>
+          </div>
+          ${usage.over ? '<p class="small muted" style="margin:6px 0 0;">You\'ve passed this month\'s free allowance. While billing isn\'t live, scanning stays free — thanks for testing ScanWise!</p>' : ''}
+        </div>` : ''}
     </div>
 
     <section aria-labelledby="recent-title">

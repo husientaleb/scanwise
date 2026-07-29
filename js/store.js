@@ -6,7 +6,12 @@ const KEYS = {
   scans: 'scanwise.scans.v1',
   prefs: 'scanwise.prefs.v1',
   onboarded: 'scanwise.onboarded.v1',
+  usage: 'scanwise.usage.v1',
 };
+
+// Free-plan allowance. A soft limit while billing is inert: the app informs
+// and nudges toward the pricing page but never blocks a scan mid-flow.
+export const FREE_SCANS_PER_MONTH = 20;
 
 export const DEFAULT_PREFS = {
   lowerSugar: false,
@@ -138,6 +143,34 @@ export function getPrefs() {
 
 export function savePrefs(prefs) {
   write(KEYS.prefs, { ...getPrefs(), ...prefs });
+}
+
+// ——— Free-plan scan usage ———
+
+/** Month key like "2026-07" for the given date (defaults to now). */
+export function monthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** { month, count, limit, remaining, over } for the current month. */
+export function getScanUsage(date = new Date()) {
+  const key = monthKey(date);
+  const raw = read(KEYS.usage, null);
+  const count = raw && raw.month === key ? raw.count : 0;
+  return {
+    month: key,
+    count,
+    limit: FREE_SCANS_PER_MONTH,
+    remaining: Math.max(0, FREE_SCANS_PER_MONTH - count),
+    over: count >= FREE_SCANS_PER_MONTH,
+  };
+}
+
+/** Count one real (non-demo) scan against this month's free allowance. */
+export function incrementScanUsage(date = new Date()) {
+  const usage = getScanUsage(date);
+  write(KEYS.usage, { month: usage.month, count: usage.count + 1 });
+  return getScanUsage(date);
 }
 
 // ——— Onboarding ———

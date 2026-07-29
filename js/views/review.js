@@ -1,11 +1,11 @@
 // review.js — the OCR review screen: the user checks and corrects extracted
 // text before any analysis runs. Nothing is analyzed until confirmed here.
 
-import { esc, toast } from '../ui.js';
+import { esc, toast, mainConcernOf } from '../ui.js';
 import { session } from '../main.js';
 import { analyzeProduct } from '../analyzer.js';
-import { getPrefs, saveScan, newId } from '../store.js';
-import { mainConcernOf } from '../ui.js';
+import { analyzeWithFallback } from '../ai.js';
+import { getPrefs, saveScan, newId, incrementScanUsage } from '../store.js';
 
 export function renderReview(el) {
   const extracted = session.pendingExtracted;
@@ -49,11 +49,11 @@ export function renderReview(el) {
       <textarea id="f-nutrition" placeholder="Serving size 1 cup (39 g). Calories 150. Sodium 190 mg. Includes 14 g added sugars. Dietary fiber 1 g. Protein 2 g.">${esc(extracted.nutritionText)}</textarea>
       <p class="small muted" style="margin-top:6px;">Anything left blank is reported as "not available" — ScanWise never fills in numbers it didn't read.</p>
 
-      <button type="submit" class="btn btn-primary btn-big btn-block" style="margin-top:14px;">Analyze product</button>
+      <button type="submit" class="btn btn-primary btn-big btn-block" style="margin-top:14px;" id="analyze-btn">Analyze product</button>
     </form>
   `;
 
-  el.querySelector('#review-form').addEventListener('submit', (e) => {
+  el.querySelector('#review-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = {
       productName: el.querySelector('#f-name').value.trim(),
@@ -66,8 +66,15 @@ export function renderReview(el) {
       return;
     }
 
+    const btn = el.querySelector('#analyze-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:2.5px;" aria-hidden="true"></span> Analyzing…';
+
     try {
-      const { analysis, scoreDetail } = analyzeProduct(input, getPrefs());
+      // Try the deployed AI endpoint; fall back to the on-device analyzer.
+      // Either way the score comes from the transparent local rubric.
+      const { analysis, scoreDetail, engine, engineNote } =
+        await analyzeWithFallback(input, session.pendingImage, getPrefs(), analyzeProduct);
       const scan = {
         id: newId(),
         productName: analysis.productName || 'Unnamed product',
@@ -76,6 +83,8 @@ export function renderReview(el) {
         extracted: { ...input, source: extracted.source },
         analysis,
         scoreDetail,
+        engine,
+        engineNote,
         overallScore: analysis.overallScore,
         mainConcern: mainConcernOf(scoreDetail),
         createdAt: new Date().toISOString(),
@@ -83,12 +92,15 @@ export function renderReview(el) {
         demo: false,
       };
       saveScan(scan);
+      incrementScanUsage();
       session.pendingExtracted = null;
       session.pendingImage = null;
       session.pendingThumbnail = null;
       location.hash = `#/report/${scan.id}`;
     } catch (err) {
       console.error(err);
+      btn.disabled = false;
+      btn.textContent = 'Analyze product';
       toast('Analysis failed unexpectedly. Please try again.', true);
     }
   });

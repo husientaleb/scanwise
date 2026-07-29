@@ -5,6 +5,8 @@ import { scoreProduct, nutrientLevel, labelForScore, BASE_SCORE } from '../js/sc
 import { validateAnalysis, emptyAnalysis } from '../js/schema.js';
 import { splitIngredients, parseNutrition, detectAllergens, analyzeProduct } from '../js/analyzer.js';
 import { DEMO_PRODUCTS } from '../js/demo-data.js';
+import { monthKey, getScanUsage, incrementScanUsage, FREE_SCANS_PER_MONTH } from '../js/store.js';
+import { buildShareText } from '../js/views/report.js';
 
 const results = [];
 function test(name, fn) {
@@ -183,6 +185,48 @@ test('detectAllergens does not flag plant milks as dairy', () => {
 test('detectAllergens still finds real dairy milk', () => {
   const found = detectAllergens('whole milk, cream, butter');
   assert(found.includes('Milk'), 'real dairy should trigger Milk');
+});
+
+// ——— free-plan scan usage ———
+
+test('monthKey formats as YYYY-MM', () => {
+  assertEq(monthKey(new Date(2026, 6, 29)), '2026-07', 'july');
+  assertEq(monthKey(new Date(2026, 11, 1)), '2026-12', 'december');
+});
+
+test('scan usage increments and resets across months', () => {
+  const saved = localStorage.getItem('scanwise.usage.v1');
+  try {
+    localStorage.removeItem('scanwise.usage.v1');
+    const july = new Date(2026, 6, 15);
+    assertEq(getScanUsage(july).count, 0, 'starts at 0');
+    incrementScanUsage(july);
+    incrementScanUsage(july);
+    assertEq(getScanUsage(july).count, 2, 'counts scans');
+    assertEq(getScanUsage(july).remaining, FREE_SCANS_PER_MONTH - 2, 'remaining');
+    const august = new Date(2026, 7, 1);
+    assertEq(getScanUsage(august).count, 0, 'new month resets');
+  } finally {
+    if (saved === null) localStorage.removeItem('scanwise.usage.v1');
+    else localStorage.setItem('scanwise.usage.v1', saved);
+  }
+});
+
+// ——— share text ———
+
+test('buildShareText includes score, findings, and disclaimer', () => {
+  const { analysis, scoreDetail } = analyzeProduct(DEMO_PRODUCTS[0]);
+  const text = buildShareText({ analysis, scoreDetail, productName: analysis.productName, demo: true });
+  assert(text.includes('Morning Crunch Cereal'), 'product name');
+  assert(text.includes(`${analysis.overallScore}/10`), 'score');
+  assert(text.includes('not medical advice'), 'disclaimer');
+  assert(text.includes('[fictional demo]'), 'demo marker');
+});
+
+test('buildShareText marks missing nutrition as n/a', () => {
+  const { analysis } = analyzeProduct({ productName: 'X', ingredientsText: 'Ingredients: oats.' });
+  const text = buildShareText({ analysis, productName: 'X' });
+  assert(text.includes('added sugar n/a'), 'missing sugar shown as n/a, not invented');
 });
 
 // ——— end-to-end analyzer ———

@@ -47,6 +47,32 @@ export function runDemoScan(demoId) {
   location.hash = `#/report/${scan.id}`;
 }
 
+/** Plain-text summary of a report for sharing/export. */
+export function buildShareText(scan) {
+  const a = scan.analysis;
+  const n = a.nutrition;
+  const fmt = (v, unit) => (v === null || v === undefined ? 'n/a' : `${v} ${unit}`);
+  const lines = [
+    `ScanWise report — ${a.productName || 'Unnamed product'}${a.brand ? ` (${a.brand})` : ''}${scan.demo ? ' [fictional demo]' : ''}`,
+    `Score: ${a.overallScore}/10 — ${a.overallLabel}`,
+    '',
+    a.summary,
+    '',
+  ];
+  if (a.keyFindings.length) {
+    lines.push('What stands out:');
+    a.keyFindings.forEach((f) => lines.push(`• ${f}`));
+    lines.push('');
+  }
+  lines.push(`Per serving${n.servingSize ? ` (${n.servingSize})` : ''}: ` +
+    `calories ${fmt(n.calories, 'kcal')}, added sugar ${fmt(n.addedSugarGrams, 'g')}, ` +
+    `sodium ${fmt(n.sodiumMg, 'mg')}, sat fat ${fmt(n.saturatedFatGrams, 'g')}, ` +
+    `fiber ${fmt(n.fiberGrams, 'g')}, protein ${fmt(n.proteinGrams, 'g')}`);
+  if (a.allergens.length) lines.push(`Major allergens detected: ${a.allergens.join(', ')}`);
+  lines.push('', 'Shared from ScanWise — general educational information, not medical advice. Always check the package label.');
+  return lines.join('\n');
+}
+
 const NUTRIENT_META = [
   ['calories', 'Calories', '', 'kcal'],
   ['addedSugarGrams', 'Added sugar', 'g', 'g'],
@@ -106,6 +132,7 @@ export function renderReport(el, scanId) {
       </div>
       <p style="margin-top:14px;">${esc(a.summary)}</p>
       ${a.allergens.length ? '<p class="small muted" style="margin:0;">This score reflects general nutrition only — it says nothing about allergy safety. See the allergy section below.</p>' : ''}
+      ${scan.engine ? `<p class="small muted" style="margin:8px 0 0;">${scan.engine === 'ai' ? '✨' : '🔧'} ${esc(scan.engineNote || '')}</p>` : ''}
     </section>
 
     <section class="card" aria-labelledby="score-why-title">
@@ -198,6 +225,7 @@ export function renderReport(el, scanId) {
     <section class="card">
       <h2>Manage this scan</h2>
       <div class="stack">
+        <button class="btn btn-secondary" id="btn-share">Share this report</button>
         ${scan.thumbnail ? '<button class="btn btn-ghost" id="btn-del-img">Delete stored image only</button>' : ''}
         <button class="btn btn-danger" id="btn-del-scan">Delete this scan</button>
       </div>
@@ -213,6 +241,27 @@ export function renderReport(el, scanId) {
     toast(nowFav ? 'Added to favorites' : 'Removed from favorites');
     renderReport(el, scan.id);
   });
+  el.querySelector('#btn-share').addEventListener('click', async () => {
+    const text = buildShareText(scan);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `ScanWise: ${scan.productName}`, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast('Report copied to clipboard');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(text);
+          toast('Report copied to clipboard');
+        } catch {
+          toast('Could not share on this device.', true);
+        }
+      }
+    }
+  });
+
   el.querySelector('#btn-del-scan').addEventListener('click', () => {
     if (confirm('Delete this scan and its report? This cannot be undone.')) {
       deleteScan(scan.id);
