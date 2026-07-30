@@ -3,7 +3,8 @@
 
 import { scoreProduct, nutrientLevel, labelForScore, BASE_SCORE } from '../js/scoring.js';
 import { validateAnalysis, emptyAnalysis } from '../js/schema.js';
-import { splitIngredients, parseNutrition, detectAllergens, analyzeProduct } from '../js/analyzer.js';
+import { splitIngredients, parseNutrition, detectAllergens, analyzeProduct, analyzeIngredient, dietFlags, wholeGrainFirst } from '../js/analyzer.js';
+import { lookupIngredient } from '../js/ingredients-db.js';
 import { DEMO_PRODUCTS } from '../js/demo-data.js';
 import { monthKey, getScanUsage, incrementScanUsage, FREE_SCANS_PER_MONTH } from '../js/store.js';
 import { buildShareText } from '../js/views/report.js';
@@ -185,6 +186,64 @@ test('detectAllergens does not flag plant milks as dairy', () => {
 test('detectAllergens still finds real dairy milk', () => {
   const found = detectAllergens('whole milk, cream, butter');
   assert(found.includes('Milk'), 'real dairy should trigger Milk');
+});
+
+// ——— ingredient lookup precision ———
+
+test('lookupIngredient uses word boundaries (graham ≠ ham, collard ≠ lard)', () => {
+  const graham = lookupIngredient('graham cracker crumbs');
+  assert(!graham || graham.name !== 'Meat / poultry ingredient', 'graham not meat');
+  const collard = lookupIngredient('collard greens');
+  assert(!collard || collard.name !== 'Meat / poultry ingredient', 'collard not lard');
+  assertEq(lookupIngredient('chicken broth').name, 'Meat / poultry ingredient', 'chicken broth is meat');
+});
+
+test('cocoa butter is a plant fat, not dairy', () => {
+  const entry = lookupIngredient('cocoa butter');
+  assertEq(entry.name, 'Plant butter (cocoa/shea)', 'cocoa butter entry');
+  assert(!entry.allergen, 'no milk allergen');
+  const dairy = lookupIngredient('butter');
+  assertEq(dairy.name, 'Butter / dairy fat', 'plain butter still dairy');
+});
+
+test('longer alias still wins with boundary matching', () => {
+  assertEq(lookupIngredient('corn syrup').name, 'Syrup / refined sweetener', 'corn syrup');
+  assertEq(lookupIngredient('milled corn').name, 'Corn', 'plain corn');
+});
+
+// ——— diet flags ———
+
+test('dietFlags detects vegetarian/vegan/gluten conflicts', () => {
+  const ings = ['gelatin', 'honey', 'barley malt extract', 'whole grain oats'].map(analyzeIngredient);
+  const flags = dietFlags(ings);
+  assert(flags.nonVegetarian.includes('Gelatin'), 'gelatin non-vegetarian');
+  assert(flags.nonVegan.includes('Honey'), 'honey non-vegan');
+  assert(flags.nonVegan.includes('Gelatin'), 'non-veg implies non-vegan');
+  assert(!flags.nonVegetarian.includes('Honey'), 'honey is vegetarian');
+  assert(flags.glutenSources.includes('Barley / malt'), 'malt is a gluten source');
+});
+
+test('vegan preference penalizes animal ingredients (personalized)', () => {
+  const ings = ['gelatin', 'sugar'].map(analyzeIngredient);
+  const r = scoreProduct({}, ings, { vegan: true });
+  const adj = r.adjustments.find((a) => a.reason.includes('vegan'));
+  assert(adj && adj.personalized && adj.delta < 0, 'personalized vegan penalty');
+});
+
+// ——— label-trick heuristics ———
+
+test('scoring flags multiple sweetener names and top-3 sweetener', () => {
+  const ings = ['sugar', 'corn syrup', 'oats', 'honey', 'salt'].map(analyzeIngredient);
+  const r = scoreProduct({}, ings, {});
+  assert(r.adjustments.some((a) => a.reason.includes('first three')), 'top-3 sweetener penalty');
+  assert(r.adjustments.some((a) => a.reason.includes('different names')), 'multi-name sweetener penalty');
+});
+
+test('whole grain first ingredient earns a bonus and a finding', () => {
+  assert(wholeGrainFirst([analyzeIngredient('whole grain oats')]), 'detects whole grain');
+  assert(!wholeGrainFirst([analyzeIngredient('sugar')]), 'sugar is not a whole grain');
+  const r = scoreProduct({}, ['whole grain oats', 'honey'].map(analyzeIngredient), {});
+  assert(r.adjustments.some((a) => a.reason.includes('Whole grain')), 'whole-grain bonus applied');
 });
 
 // ——— free-plan scan usage ———

@@ -136,6 +136,39 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
     for (const ing of highConcern.slice(0, 2)) {
       add(`Contains ${ing.name.toLowerCase()} — see ingredient notes`, -0.7);
     }
+
+    // Ingredient lists are ordered by weight: a sweetener in the top three
+    // means sugar is a primary ingredient, and several sweetener names is a
+    // common way to spread sugar down the list.
+    const sweetenerNames = [...new Set(list.filter((i) => i.category === 'Sweetener').map((i) => (i.rawName || i.name).toLowerCase()))];
+    if (list.slice(0, 3).some((i) => i.category === 'Sweetener')) {
+      add('A sweetener is among the first three ingredients', -0.5);
+    }
+    if (sweetenerNames.length >= 3) {
+      add(`Sweeteners appear under ${sweetenerNames.length} different names`, -0.5);
+    }
+    const first = (list[0]?.rawName || '').toLowerCase();
+    if (/whole\s(grain|wheat|oat|rye|corn)|whole-grain|oats\b|rolled oats|brown rice|quinoa|buckwheat|millet/.test(first)) {
+      add('Whole grain listed as the first ingredient', +0.3);
+    }
+
+    // Diet-preference conflicts (informational penalties, clearly personalized).
+    const names = (arr) => [...new Set(arr.map((i) => i.name))].join(', ');
+    if (prefs.vegan) {
+      const hits = list.filter((i) => i.nonVegan || i.nonVeg);
+      if (hits.length) add(`Contains ${names(hits)} — conflicts with your vegan preference`, -1, true);
+    } else if (prefs.vegetarian) {
+      const hits = list.filter((i) => i.nonVeg);
+      if (hits.length) add(`Contains ${names(hits)} — conflicts with your vegetarian preference`, -1, true);
+    }
+    if (prefs.glutenAvoidance) {
+      const hits = list.filter((i) => i.gluten);
+      if (hits.length) add(`Contains gluten sources (${names(hits)}) you asked to avoid`, -1, true);
+    }
+    if (prefs.dairyAvoidance) {
+      const hits = list.filter((i) => i.allergen === 'Milk');
+      if (hits.length) add(`Contains dairy (${names(hits)}) you asked to avoid`, -1, true);
+    }
     const additiveCount = list.filter((i) =>
       ['Preservative', 'Color', 'Emulsifier', 'Sweetener'].includes(i.category)).length;
     if (list.length >= 15 && additiveCount >= 5) {

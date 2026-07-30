@@ -18,7 +18,7 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['whole wheat', 'wheat flour', 'enriched flour', 'enriched wheat flour', 'wheat'],
-    name: 'Wheat flour', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Wheat',
+    name: 'Wheat flour', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Wheat', gluten: true,
     purpose: 'Main structural grain in baked and extruded products.',
     explanation: 'Milled wheat. "Enriched" means B vitamins and iron were added back after milling; "whole wheat" keeps the bran and germ, which adds fiber.',
     evidence: 'Whole-grain versions carry more fiber and micronutrients than refined flour. Refined flour is not harmful in itself; overall dietary pattern matters most.',
@@ -74,14 +74,14 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['honey'],
-    name: 'Honey', category: 'Sweetener', concernLevel: 'moderate',
+    name: 'Honey', category: 'Sweetener', concernLevel: 'moderate', nonVegan: true,
     purpose: 'Natural sweetener; also binds ingredients in bars and granola.',
     explanation: 'A sugar-rich syrup made by bees. Nutritionally it behaves much like other added sugars.',
     evidence: 'Counts toward added-sugar intake despite its natural origin. The total amount matters more than the source.',
     attention: 'Not for infants under 12 months (botulism risk). People limiting added sugar should count honey toward that total.',
   },
   {
-    match: ['raisin', 'raisins', 'dried cranberr', 'dates', 'dried fruit'],
+    match: ['raisin', 'raisins', 'cranberry', 'cranberries', 'dried cranberries', 'dates', 'dried fruit'],
     name: 'Dried fruit', category: 'Common food ingredient', concernLevel: 'low',
     purpose: 'Adds natural sweetness, chew, and some fiber.',
     explanation: 'Fruit with the water removed, which concentrates both nutrients and natural sugars.',
@@ -114,7 +114,7 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['butter', 'cream', 'milk fat', 'butterfat'],
-    name: 'Butter / dairy fat', category: 'Common food ingredient', concernLevel: 'moderate', allergen: 'Milk',
+    name: 'Butter / dairy fat', category: 'Common food ingredient', concernLevel: 'moderate', allergen: 'Milk', nonVegan: true,
     purpose: 'Adds richness, flavor, and tenderness.',
     explanation: 'Fat concentrated from milk. High in saturated fat.',
     evidence: 'Contributes saturated fat, which most guidelines suggest moderating. Fine in modest amounts within an overall balanced diet.',
@@ -320,7 +320,7 @@ export const INGREDIENT_DB = [
 
   // ——— Leavening / processing aids ———
   {
-    match: ['baking soda', 'sodium bicarbonate', 'baking powder', 'yeast', 'sodium acid pyrophosphate', 'monocalcium phosphate'],
+    match: ['baking soda', 'sodium bicarbonate', 'baking powder', 'yeast', 'sodium acid pyrophosphate', 'monocalcium phosphate', 'cream of tartar'],
     name: 'Leavening agent', category: 'Other', concernLevel: 'low',
     purpose: 'Makes baked products rise and gives them structure.',
     explanation: 'Standard baking chemistry — acids and bases that release gas, or live yeast.',
@@ -331,7 +331,7 @@ export const INGREDIENT_DB = [
   // ——— Dairy / protein ———
   {
     match: ['whey', 'whey protein', 'milk protein', 'casein', 'caseinate', 'nonfat milk', 'skim milk', 'milk', 'buttermilk', 'lactose', 'cheese'],
-    name: 'Milk-derived ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Milk',
+    name: 'Milk-derived ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Milk', nonVegan: true,
     purpose: 'Adds protein, creaminess, or dairy flavor.',
     explanation: 'Ingredients made from milk, such as whey (a complete protein) or milk solids.',
     evidence: 'Dairy proteins are high quality. Tolerance varies — lactose intolerance is common but distinct from milk allergy.',
@@ -347,7 +347,7 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['egg', 'eggs', 'egg white', 'albumen'],
-    name: 'Egg', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Eggs',
+    name: 'Egg', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Eggs', nonVegan: true,
     purpose: 'Binds, leavens, and adds protein.',
     explanation: 'Whole egg or egg components; egg white is nearly pure protein.',
     evidence: 'A nutrient-dense food. For most people, moderate egg intake fits within a healthy diet.',
@@ -371,7 +371,7 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['fish', 'anchovy', 'salmon', 'tuna', 'cod', 'fish oil'],
-    name: 'Fish ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Fish',
+    name: 'Fish ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Fish', nonVeg: true,
     purpose: 'Adds protein, flavor, or omega-3 fats.',
     explanation: 'Fish or fish-derived ingredients (anchovy is common in sauces like Worcestershire).',
     evidence: 'Fish intake is broadly encouraged in dietary guidelines for its omega-3 content.',
@@ -379,11 +379,149 @@ export const INGREDIENT_DB = [
   },
   {
     match: ['shrimp', 'crab', 'lobster', 'shellfish', 'oyster', 'clam', 'mussel'],
-    name: 'Shellfish ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Shellfish',
+    name: 'Shellfish ingredient', category: 'Common food ingredient', concernLevel: 'low', allergen: 'Shellfish', nonVeg: true,
     purpose: 'Adds protein and seafood flavor.',
     explanation: 'Crustacean or mollusk ingredients.',
     evidence: 'Lean protein sources; typical concerns relate to allergy rather than nutrition.',
     attention: 'Shellfish is a major allergen and a common cause of adult-onset food allergy.',
+  },
+
+  // ——— Animal-derived & meats ———
+  {
+    match: ['gelatin', 'gelatine'],
+    name: 'Gelatin', category: 'Other', concernLevel: 'low', nonVeg: true,
+    purpose: 'Gelling agent that gives gummies, marshmallows, and desserts their texture.',
+    explanation: 'A protein extracted from animal collagen (usually pork or beef).',
+    evidence: 'Safe as a food ingredient. Not a complete protein, so it adds little nutritionally.',
+    attention: 'Animal-derived — relevant for vegetarians, vegans, and some religious diets (kosher/halal status varies by source).',
+  },
+  {
+    match: ['chicken', 'beef', 'pork', 'turkey', 'bacon', 'ham', 'chicken broth', 'beef broth', 'bone broth', 'meat', 'lard', 'tallow', 'chicken fat'],
+    name: 'Meat / poultry ingredient', category: 'Common food ingredient', concernLevel: 'low', nonVeg: true,
+    purpose: 'Adds protein, flavor, and richness (broths and fats carry savory flavor).',
+    explanation: 'Meat, poultry, or their broths and rendered fats.',
+    evidence: 'Unprocessed lean meats are a protein source; cured/processed versions (bacon, ham) carry the processed-meat considerations noted for nitrites. Lard and tallow are high in saturated fat.',
+    attention: 'Not vegetarian. For cured meats, see the nitrite/nitrate notes; for lard/tallow, the saturated-fat line matters.',
+  },
+  {
+    match: ['carmine', 'cochineal', 'carminic acid'],
+    name: 'Carmine (cochineal)', category: 'Color', concernLevel: 'low', nonVeg: true,
+    purpose: 'A stable red color.',
+    explanation: 'A red pigment made from cochineal insects.',
+    evidence: 'Approved and generally well tolerated; rare allergic reactions have been reported and it must be named on US labels.',
+    attention: 'Insect-derived — not vegetarian or vegan. The rare individuals allergic to carmine should avoid it.',
+  },
+
+  // ——— Fats & specialty ingredients ———
+  {
+    match: ['cocoa butter', 'cacao butter', 'shea butter', 'mango butter'],
+    name: 'Plant butter (cocoa/shea)', category: 'Common food ingredient', concernLevel: 'low',
+    purpose: 'Gives chocolate its snap and melt; adds smooth texture.',
+    explanation: 'Despite the name, these are plant fats pressed from cocoa or shea seeds — no dairy involved.',
+    evidence: 'Cocoa butter is high in saturated fat, but much of it is stearic acid, which appears roughly neutral for cholesterol. Fine in normal amounts.',
+    attention: 'Dairy-free and vegan despite "butter" in the name. Calorie-dense like all fats.',
+  },
+  {
+    match: ['coconut oil', 'coconut milk', 'coconut cream', 'desiccated coconut'],
+    name: 'Coconut', category: 'Common food ingredient', concernLevel: 'moderate',
+    purpose: 'Adds rich texture and flavor; coconut oil is a stable cooking fat.',
+    explanation: 'Coconut flesh, milk, or oil. Coconut oil is one of the most saturated plant fats (~90%).',
+    evidence: 'Coconut oil raises both LDL and HDL cholesterol; most heart associations suggest treating it like other saturated fats rather than as a health food. Occasional use is fine.',
+    attention: 'People watching saturated fat. The FDA historically listed coconut as a tree nut for labeling, though true coconut allergy is uncommon — check with an allergist if unsure.',
+  },
+  {
+    match: ['partially hydrogenated', 'hydrogenated oil', 'hydrogenated vegetable oil', 'vegetable shortening', 'shortening'],
+    name: 'Hydrogenated oil / shortening', category: 'Common food ingredient', concernLevel: 'high',
+    purpose: 'A solid, shelf-stable fat for baking and frying.',
+    explanation: 'Oils solidified by hydrogenation. "Partially hydrogenated" oils were the main source of industrial trans fat.',
+    evidence: 'Artificial trans fat raises heart-disease risk with no known safe intake, which is why partially hydrogenated oils are banned in the US and many regions. Fully hydrogenated oils and modern shortenings contain little or no trans fat but remain saturated-fat-heavy.',
+    attention: 'Anyone watching heart health. If a label still says "partially hydrogenated," strongly consider an alternative product.',
+  },
+  {
+    match: ['quinoa', 'chia', 'flaxseed', 'flax seed', 'ground flax', 'sunflower seeds', 'pumpkin seeds', 'hemp seed', 'hemp hearts', 'millet', 'buckwheat', 'amaranth'],
+    name: 'Seeds & pseudo-grains', category: 'Common food ingredient', concernLevel: 'low',
+    purpose: 'Adds protein, fiber, minerals, and healthy fats.',
+    explanation: 'Nutrient-dense seeds and gluten-free grain alternatives like quinoa and buckwheat.',
+    evidence: 'Consistently positive nutrition profile: fiber, plant protein, unsaturated fats, and micronutrients.',
+    attention: 'Rarely allergenic for some individuals (e.g. sunflower or buckwheat allergies exist but are uncommon).',
+  },
+  {
+    match: ['live cultures', 'active cultures', 'live and active cultures', 'probiotic', 'lactobacillus', 'bifidobacterium', 's. thermophilus', 'streptococcus thermophilus'],
+    name: 'Live cultures / probiotics', category: 'Other', concernLevel: 'low',
+    purpose: 'Ferments the food and may support gut health.',
+    explanation: 'Beneficial bacteria used to ferment yogurt, kefir, and similar foods.',
+    evidence: 'Fermented foods with live cultures are associated with digestive benefits; specific probiotic health claims vary in evidence strength by strain.',
+    attention: 'Generally beneficial. Severely immunocompromised individuals are sometimes advised about live cultures by their care team.',
+  },
+
+  // ——— Gluten grains beyond wheat ———
+  {
+    match: ['barley', 'barley malt', 'malt extract', 'malt syrup', 'malted barley', 'malt flavoring', 'malt flavor'],
+    name: 'Barley / malt', category: 'Common food ingredient', concernLevel: 'low', gluten: true,
+    purpose: 'Grain base or malty-sweet flavoring (very common in cereals).',
+    explanation: 'Barley or its sprouted, concentrated extract (malt). Malt syrup also acts as a sweetener.',
+    evidence: 'A whole grain in intact form; malt extract is closer to an added sugar.',
+    attention: 'Contains gluten but is NOT wheat — it won\'t appear in a "Contains: wheat" statement, so people avoiding gluten need to spot malt themselves.',
+  },
+  {
+    match: ['rye', 'rye flour', 'triticale'],
+    name: 'Rye', category: 'Common food ingredient', concernLevel: 'low', gluten: true,
+    purpose: 'Grain base with a distinctive hearty flavor.',
+    explanation: 'A cereal grain related to wheat, common in dark breads.',
+    evidence: 'Whole rye is high in fiber and a solid whole-grain choice.',
+    attention: 'Contains gluten — relevant for celiac disease even though rye is not a "major allergen" on US labels.',
+  },
+
+  // ——— More sweeteners ———
+  {
+    match: ['molasses', 'agave', 'agave nectar', 'agave syrup', 'maple syrup', 'coconut sugar', 'date syrup', 'date sugar', 'evaporated cane juice', 'cane juice', 'turbinado', 'demerara', 'fruit juice concentrate', 'apple juice concentrate', 'grape juice concentrate'],
+    name: 'Unrefined / fruit-based sweetener', category: 'Sweetener', concernLevel: 'moderate',
+    purpose: 'Sweetens with a marketing-friendlier name than "sugar".',
+    explanation: 'Less-refined sugars (molasses, coconut sugar), plant syrups (agave, maple), or concentrated fruit juices. All function as added sugar.',
+    evidence: 'Trace minerals aside, these behave like other added sugars in the body and count toward added-sugar totals on the label.',
+    attention: 'Anyone limiting added sugar — "natural" sweetener names still count. Juice concentrates are a common way lists downplay sugar.',
+  },
+
+  // ——— More preservatives & processing ———
+  {
+    match: ['tbhq', 'tertiary butylhydroquinone'],
+    name: 'TBHQ', category: 'Preservative', concernLevel: 'moderate',
+    purpose: 'Antioxidant that extends the shelf life of oils and fried snacks.',
+    explanation: 'A synthetic antioxidant, chemically related to BHA/BHT.',
+    evidence: 'Permitted at strict low limits (0.02% of fat content). High-dose animal studies drove those limits; typical dietary exposure is far below them.',
+    attention: 'Consumers preferring fewer synthetic preservatives can choose tocopherol-preserved alternatives.',
+  },
+  {
+    match: ['titanium dioxide'],
+    name: 'Titanium dioxide', category: 'Color', concernLevel: 'moderate',
+    purpose: 'Makes coatings and candies opaque white.',
+    explanation: 'A white mineral pigment.',
+    evidence: 'The EU banned it as a food additive in 2022 over unresolved questions about nanoparticle accumulation; the US FDA still permits it. An honest summary: regulators disagree, and it adds nothing nutritionally.',
+    attention: 'Easy to avoid if you prefer — it appears mostly in candies, gum, and white coatings.',
+  },
+  {
+    match: ['vinegar', 'apple cider vinegar', 'white vinegar', 'distilled vinegar'],
+    name: 'Vinegar', category: 'Preservative', concernLevel: 'low',
+    purpose: 'Adds tang and inhibits microbes.',
+    explanation: 'Dilute acetic acid from fermentation — one of the oldest food preservatives.',
+    evidence: 'No concerns at food levels.',
+    attention: 'No common concerns.',
+  },
+  {
+    match: ['potassium chloride'],
+    name: 'Potassium chloride', category: 'Other', concernLevel: 'low',
+    purpose: 'Salt substitute that cuts sodium while keeping a salty taste.',
+    explanation: 'A potassium salt used to replace part of the sodium chloride.',
+    evidence: 'Usually a positive swap — most people get too little potassium and too much sodium.',
+    attention: 'People with kidney disease or on potassium-sparing medications should follow their clinician\'s potassium guidance.',
+  },
+  {
+    match: ['phosphoric acid', 'sodium phosphate', 'disodium phosphate', 'trisodium phosphate', 'calcium phosphate'],
+    name: 'Phosphate additive', category: 'Other', concernLevel: 'low',
+    purpose: 'Adjusts acidity (colas), stabilizes texture, and prevents caking.',
+    explanation: 'Mineral phosphate salts and acids.',
+    evidence: 'Safe for most people at typical intakes; added phosphates are absorbed more completely than natural food phosphorus.',
+    attention: 'Mainly relevant for people with chronic kidney disease, who are often asked to limit phosphate additives.',
   },
 
   // ——— Misc additives ———
@@ -438,9 +576,13 @@ export const ALLERGEN_EXCLUSIONS = {
   ],
 };
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Look up an ingredient by its label text. Returns the best DB entry or null.
- * Longer alias matches win so "corn syrup" beats "corn".
+ * Aliases match on word boundaries (with plural tolerance) so "graham
+ * cracker" never matches "ham" — and longer alias matches win so
+ * "corn syrup" beats "corn".
  */
 export function lookupIngredient(rawName) {
   const name = rawName.toLowerCase().trim();
@@ -448,11 +590,11 @@ export function lookupIngredient(rawName) {
   let bestLen = 0;
   for (const entry of INGREDIENT_DB) {
     for (const alias of entry.match) {
-      if (name === alias || name.includes(alias)) {
-        if (alias.length > bestLen) {
-          best = entry;
-          bestLen = alias.length;
-        }
+      if (alias.length <= bestLen) continue;
+      const re = new RegExp(`(^|[^a-z])${escapeRe(alias)}(?:s|es)?([^a-z]|$)`, 'i');
+      if (name === alias || re.test(name)) {
+        best = entry;
+        bestLen = alias.length;
       }
     }
   }

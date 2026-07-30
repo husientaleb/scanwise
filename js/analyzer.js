@@ -55,6 +55,9 @@ export function analyzeIngredient(rawName) {
       whoShouldPayAttention: entry.attention,
       concernLevel: entry.concernLevel,
       allergen: entry.allergen || null,
+      nonVeg: entry.nonVeg || false,
+      nonVegan: entry.nonVegan || entry.nonVeg || false,
+      gluten: entry.gluten || false,
     };
   }
   return {
@@ -67,7 +70,31 @@ export function analyzeIngredient(rawName) {
     whoShouldPayAttention: 'If you have specific dietary restrictions, verify this ingredient with the manufacturer or a reliable reference.',
     concernLevel: 'unknown',
     allergen: null,
+    nonVeg: false,
+    nonVegan: false,
+    gluten: false,
   };
+}
+
+/**
+ * Diet-compatibility flags from the matched ingredient entries. Only asserts
+ * what the database knows — unknown ingredients never produce a "suitable"
+ * claim, which is why the report words this as "nothing flagged" rather than
+ * "vegan-friendly".
+ */
+export function dietFlags(ingredients) {
+  const uniq = (arr) => [...new Set(arr)];
+  return {
+    nonVegetarian: uniq(ingredients.filter((i) => i.nonVeg).map((i) => i.name)),
+    nonVegan: uniq(ingredients.filter((i) => i.nonVegan).map((i) => i.name)),
+    glutenSources: uniq(ingredients.filter((i) => i.gluten).map((i) => i.name)),
+  };
+}
+
+/** True when the raw first-ingredient text names a whole grain. */
+export function wholeGrainFirst(ingredients) {
+  const first = ingredients[0]?.rawName?.toLowerCase() || '';
+  return /whole\s(grain|wheat|oat|rye|corn)|whole-grain|oats\b|rolled oats|brown rice|quinoa|buckwheat|millet/.test(first);
 }
 
 /** Detect the 9 major allergens from a full text blob (ingredients + contains statement). */
@@ -131,6 +158,10 @@ function buildKeyFindings(nutrition, ingredients, allergens) {
   if (lvl('addedSugarGrams') === 'high') {
     findings.push(`High added sugar: ${nutrition.addedSugarGrams} g per serving. This is a meaningful amount, especially if you eat more than one serving.`);
   }
+  const sweeteners = [...new Set(ingredients.filter((i) => i.category === 'Sweetener').map((i) => (i.rawName || i.name).toLowerCase()))];
+  if (sweeteners.length >= 3) {
+    findings.push(`Sweeteners under ${sweeteners.length} different names (${sweeteners.join(', ')}) — splitting sugar across names moves each one lower on the list.`);
+  }
   if (lvl('sodiumMg') === 'high') {
     findings.push(`High sodium: ${nutrition.sodiumMg} mg per serving — about ${Math.round((nutrition.sodiumMg / 2300) * 100)}% of the daily guideline for most adults.`);
   }
@@ -144,6 +175,9 @@ function buildKeyFindings(nutrition, ingredients, allergens) {
   }
   if (lvl('proteinGrams') === 'high') {
     findings.push(`High protein: ${nutrition.proteinGrams} g per serving helps with satiety.`);
+  }
+  if (wholeGrainFirst(ingredients)) {
+    findings.push(`Whole grain listed first: ingredient lists are ordered by weight, so a whole grain leading the list is a good sign.`);
   }
   if (allergens.length) {
     findings.push(`Contains major allergen${allergens.length > 1 ? 's' : ''}: ${allergens.join(', ')}. Always verify the package if you have a food allergy.`);
@@ -262,6 +296,8 @@ export function analyzeProduct(input, prefs = {}) {
     nutrition,
     alternativeGuidance: buildAlternativeGuidance(nutrition, ingredients, prefs),
     limitations,
+    // Extra, schema-compatible metadata (validators ignore unknown keys).
+    dietFlags: dietFlags(ingredients),
   };
 
   const check = validateAnalysis(analysis);

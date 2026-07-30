@@ -47,6 +47,42 @@ export function runDemoScan(demoId) {
   location.hash = `#/report/${scan.id}`;
 }
 
+/** Diet & lifestyle card: shows what the ingredient database flagged for
+ *  vegetarian/vegan/gluten/dairy concerns. Only renders when there is
+ *  something to say (a relevant preference is set, or a flag was found). */
+function dietCheckHtml(a, prefs) {
+  const flags = a.dietFlags || { nonVegetarian: [], nonVegan: [], glutenSources: [] };
+  const dairy = a.ingredients.filter((i) => i.allergen === 'Milk').map((i) => i.name);
+
+  const rows = [];
+  const row = (label, hits, prefOn) => {
+    if (!hits.length && !prefOn) return;
+    rows.push(`
+      <div class="row" style="align-items:flex-start;">
+        <span aria-hidden="true" style="flex:none;">${hits.length ? '⚠️' : '✅'}</span>
+        <p class="small" style="margin:0;">
+          <strong>${label}:</strong>
+          ${hits.length
+            ? `contains ${esc([...new Set(hits)].join(', '))}${prefOn ? ' — you flagged this in your preferences' : ''}.`
+            : 'nothing flagged in our ingredient database.'}
+        </p>
+      </div>`);
+  };
+
+  row('Vegetarian', flags.nonVegetarian, prefs.vegetarian);
+  row('Vegan', flags.nonVegan, prefs.vegan);
+  row('Gluten', flags.glutenSources, prefs.glutenAvoidance);
+  row('Dairy', dairy, prefs.dairyAvoidance);
+
+  if (!rows.length) return '';
+  return `
+    <section class="card" aria-labelledby="diet-title">
+      <h2 id="diet-title">Diet check</h2>
+      <div class="stack">${rows.join('')}</div>
+      <p class="small muted" style="margin:10px 0 0;">Based only on ingredients our database recognizes — "nothing flagged" is a helpful signal, not a certification. Malt and rye contain gluten without triggering a wheat allergen statement.</p>
+    </section>`;
+}
+
 /** Plain-text summary of a report for sharing/export. */
 export function buildShareText(scan) {
   const a = scan.analysis;
@@ -174,6 +210,8 @@ export function renderReport(el, scanId) {
         : '<p class="small muted">No major allergens were detected in the text we read — but detection depends on label quality.</p>'}
       <p class="small muted" style="margin:0;">${esc(ALLERGY_WARNING)}</p>
     </section>
+
+    ${dietCheckHtml(a, prefs)}
 
     <section class="card" aria-labelledby="nutrition-title">
       <h2 id="nutrition-title">Nutrition per serving</h2>
