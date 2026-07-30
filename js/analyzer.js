@@ -7,47 +7,46 @@
 import { lookupIngredient, ALLERGEN_KEYWORDS, ALLERGEN_EXCLUSIONS } from './ingredients-db.js';
 import { scoreProduct, nutrientLevel, THRESHOLDS } from './scoring.js';
 import { validateAnalysis, emptyAnalysis } from './schema.js';
+import { parseIngredientTree, flattenIngredientTree } from './ingredient-parser.js';
+import { normalizeIngredientName } from './normalize.js';
 
-/** Split an ingredient list string into individual items, respecting ( ) and [ ]. */
+/**
+ * Flat list of every ingredient and sub-ingredient label name (advisory
+ * statements excluded). Backed by the hierarchical parser; kept as the
+ * simple entry point for callers that only need names.
+ */
 export function splitIngredients(text) {
-  if (!text) return [];
-  let cleaned = text
-    .replace(/^\s*ingredients?\s*[:.]?\s*/i, '')
-    .replace(/\bcontains\s+2%\s+or\s+less\s+of\s*[:.]?/gi, ',')
-    .replace(/\bcontains\s+less\s+than\s+2%\s+of\s*[:.]?/gi, ',')
-    .replace(/\band\/or\b/gi, ' or ');
-  // Drop a trailing "Contains: ..." allergen statement — handled separately.
-  cleaned = cleaned.replace(/\bcontains\s*:\s*[^.]*\.?\s*$/i, '');
-
-  const items = [];
-  let depth = 0;
-  let current = '';
-  for (const ch of cleaned) {
-    if (ch === '(' || ch === '[') depth++;
-    else if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
-    if ((ch === ',' || ch === ';' || ch === '.') && depth === 0) {
-      if (current.trim()) items.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  if (current.trim()) items.push(current.trim());
-  return items
-    .map((s) => s.replace(/\s+/g, ' ').trim())
-    // Allergen advisory statements are not ingredients; they're handled by
-    // detectAllergens() on the full text.
-    .filter((s) => !/^(contains|may contain|processed in|manufactured in|made in a facility)\b/i.test(s))
+  const { ingredients } = parseIngredientTree(text);
+  return flattenIngredientTree(ingredients)
+    .map((n) => n.labelName)
     .filter((s) => s.length > 1 && s.length < 120);
 }
 
-/** Build a schema-shaped ingredient entry from raw label text. */
-export function analyzeIngredient(rawName) {
-  const entry = lookupIngredient(rawName);
+/**
+ * Build a schema-shaped ingredient entry from raw label text.
+ * @param {string} rawName  ingredient text as printed
+ * @param {object} [meta]   parser metadata: { depth, parentIndex, order, twoPercentOrLess }
+ */
+export function analyzeIngredient(rawName, meta = {}) {
+  // Normalize first (E-numbers, synonyms); look up under the label name,
+  // then under the normalized entity ("E322" → "lecithins" → lecithin entry).
+  const norm = normalizeIngredientName(rawName);
+  const entry = lookupIngredient(rawName) || (norm.confident ? lookupIngredient(norm.normalizedName) : null);
+
+  const base = {
+    rawName,
+    normalizedName: norm.normalizedName,
+    normalizationConfirmed: norm.confident,
+    eNumber: norm.eNumber,
+    depth: meta.depth || 0,
+    parentIndex: meta.parentIndex ?? null,
+    twoPercentOrLess: meta.twoPercentOrLess || false,
+  };
+
   if (entry) {
     return {
+      ...base,
       name: entry.name,
-      rawName,
       category: entry.category,
       purpose: entry.purpose,
       plainLanguageExplanation: entry.explanation,
@@ -58,11 +57,14 @@ export function analyzeIngredient(rawName) {
       nonVeg: entry.nonVeg || false,
       nonVegan: entry.nonVegan || entry.nonVeg || false,
       gluten: entry.gluten || false,
+      evidenceGrade: entry.evidenceGrade || null,
+      regulatory: entry.regulatory || null,
+      sources: entry.sources || null,
     };
   }
   return {
+    ...base,
     name: rawName.replace(/\s*\(.*\)\s*/g, '').trim() || rawName,
-    rawName,
     category: 'Other',
     purpose: 'Not identified — purpose unknown for this specific ingredient.',
     plainLanguageExplanation: `"${rawName}" is not in ScanWise's ingredient database yet. An unfamiliar or chemical-sounding name does not by itself mean an ingredient is unsafe — many safe ingredients have technical names.`,
@@ -73,6 +75,9 @@ export function analyzeIngredient(rawName) {
     nonVeg: false,
     nonVegan: false,
     gluten: false,
+    evidenceGrade: 'Unknown',
+    regulatory: null,
+    sources: null,
   };
 }
 
@@ -255,9 +260,22 @@ function buildSummary(productName, score, nutrition, ingredients, allergens, lim
 export function analyzeProduct(input, prefs = {}) {
   const { productName = '', brand = '', ingredientsText = '', nutritionText = '' } = input;
 
-  const rawItems = splitIngredients(ingredientsText);
-  const ingredients = rawItems.map(analyzeIngredient);
+  const tree = parseIngredientTree(ingredientsText);
+  const flat = flattenIngredientTree(tree.ingredients)
+    .filter((n) => n.labelName.length > 1 && n.labelName.length < 120);
+  const ingredients = flat.map((node) => analyzeIngredient(node.labelName, node));
+  const rawItems = flat.map((n) => n.labelName);
   const nutrition = parseNutrition(nutritionText);
+  // Reconciled database values may FILL fields the label didn't show —
+  // never replace a value that was visible on the package (reconcile.js
+  // rule 3; provenance is recorded in the scan's reconciliation records).
+  if (input.nutritionFill) {
+    for (const [key, value] of Object.entries(input.nutritionFill)) {
+      if (nutrition[key] === null && value !== null && value !== undefined) {
+        nutrition[key] = value;
+      }
+    }
+  }
   const allergens = detectAllergens(`${ingredientsText}\n${nutritionText}`);
 
   const limitations = [];
@@ -298,6 +316,7 @@ export function analyzeProduct(input, prefs = {}) {
     limitations,
     // Extra, schema-compatible metadata (validators ignore unknown keys).
     dietFlags: dietFlags(ingredients),
+    advisories: tree.advisories,
   };
 
   const check = validateAnalysis(analysis);

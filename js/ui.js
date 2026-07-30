@@ -101,8 +101,23 @@ const CATEGORY_EMOJI = {
   Other: '❔',
 };
 
+export function evidenceGradeBadge(grade) {
+  if (!grade) return '';
+  const map = {
+    A: ['badge-green', 'Evidence: A — strong human/regulatory consensus'],
+    B: ['badge-blue', 'Evidence: B — moderate human evidence'],
+    C: ['badge-amber', 'Evidence: C — limited or conflicting evidence'],
+    D: ['badge-gray', 'Evidence: D — mainly animal/lab studies'],
+    E: ['badge-gray', 'Evidence: E — hypothesis or anecdote'],
+    Unknown: ['badge-gray', 'Evidence: not assessed'],
+  };
+  const [cls, label] = map[grade] || map.Unknown;
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
 export function ingredientCard(ing, index) {
   const emoji = CATEGORY_EMOJI[ing.category] || '❔';
+  const depth = ing.depth || 0;
   // Header shows what's actually on the label (e.g. "Red 40"), with the
   // knowledge-base entry name ("Synthetic food dye") as context underneath.
   const raw = (ing.rawName || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
@@ -111,10 +126,10 @@ export function ingredientCard(ing, index) {
     : ing.name;
   const sub = headline.toLowerCase() !== ing.name.toLowerCase() ? ing.name : '';
   return `
-    <div class="ing-card" data-open="false">
+    <div class="ing-card" data-open="false" style="${depth ? `margin-left:${Math.min(depth, 3) * 18}px;` : ''}">
       <button class="card-toggle" data-ing-toggle="${index}" aria-expanded="false">
         <span class="row" style="gap:10px; min-width:0;">
-          <span aria-hidden="true">${emoji}</span>
+          <span aria-hidden="true">${depth ? '↳ ' : ''}${emoji}</span>
           <span style="overflow:hidden; text-overflow:ellipsis; min-width:0;">
             ${esc(headline)}
             ${sub ? `<span class="small muted" style="display:block; font-weight:400;">${esc(sub)}</span>` : ''}
@@ -128,12 +143,23 @@ export function ingredientCard(ing, index) {
       <div class="ing-body">
         ${ing.rawName && ing.rawName.toLowerCase() !== ing.name.toLowerCase()
           ? `<p class="small muted">On the label as: “${esc(ing.rawName)}”</p>` : ''}
+        ${ing.twoPercentOrLess ? '<p class="small muted">Listed under “contains 2% or less” — a minor ingredient by weight.</p>' : ''}
         <dl>
           <dt>What it is</dt><dd>${esc(ing.plainLanguageExplanation)}</dd>
           <dt>Why it's used</dt><dd>${esc(ing.purpose)}</dd>
-          <dt>What the evidence says</dt><dd>${esc(ing.evidenceSummary)}</dd>
+          <dt>What the evidence says</dt><dd>${esc(ing.evidenceSummary)} ${evidenceGradeBadge(ing.evidenceGrade)}</dd>
+          ${ing.regulatory ? `<dt>Regulatory status</dt><dd>${esc(ing.regulatory)}</dd>` : ''}
           <dt>Who may want to pay closer attention</dt><dd>${esc(ing.whoShouldPayAttention)}</dd>
-          <dt>Category</dt><dd><span class="badge badge-gray">${esc(ing.category)}</span></dd>
+          <dt>Category</dt><dd>
+            <span class="badge badge-gray">${esc(ing.category)}</span>
+            ${ing.eNumber ? `<span class="badge badge-gray">${esc(ing.eNumber)}</span>` : ''}
+            ${ing.normalizedName && ing.normalizedName.toLowerCase() !== (ing.rawName || '').toLowerCase() && ing.normalizationConfirmed
+              ? `<span class="badge badge-blue">= ${esc(ing.normalizedName)}</span>` : ''}
+          </dd>
+          ${ing.sources && ing.sources.length ? `
+            <dt>Sources</dt>
+            <dd class="small">${ing.sources.map((s) =>
+              `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.org)}: ${esc(s.title)}</a>`).join('<br />')}</dd>` : ''}
         </dl>
       </div>
     </div>`;

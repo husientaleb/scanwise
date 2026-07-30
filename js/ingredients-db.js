@@ -148,6 +148,12 @@ export const INGREDIENT_DB = [
     explanation: 'Sucrose from cane or beet. The most common added sugar.',
     evidence: 'High added-sugar intake is linked to excess calorie intake and dental caries. Guidelines suggest keeping added sugars under about 10% of daily calories — the amount per serving is what matters.',
     attention: 'People managing weight, blood sugar, or dental health may want to note the added-sugar grams per serving.',
+    evidenceGrade: 'A',
+    regulatory: 'US Dietary Guidelines and WHO both advise limiting added/free sugars (~10% of calories).',
+    sources: [
+      { org: 'USDA/HHS', title: 'Dietary Guidelines for Americans 2020–2025', url: 'https://www.dietaryguidelines.gov/' },
+      { org: 'WHO', title: 'Guideline: Sugars intake for adults and children', url: 'https://www.who.int/publications/i/item/9789241549028' },
+    ],
   },
   {
     match: ['corn syrup', 'high fructose corn syrup', 'hfcs', 'glucose syrup', 'glucose-fructose', 'rice syrup', 'brown rice syrup', 'tapioca syrup', 'maltodextrin', 'dextrose', 'maltose', 'fructose'],
@@ -164,6 +170,12 @@ export const INGREDIENT_DB = [
     explanation: 'High-intensity sweeteners (like sucralose or stevia extracts) or sugar alcohols (like erythritol) used in place of sugar.',
     evidence: 'Approved sweeteners have been extensively reviewed by regulators and are considered safe at typical intakes. Long-term health effects relative to sugar are still actively researched.',
     attention: 'Sugar alcohols can cause digestive upset in larger amounts. People with PKU must avoid aspartame (labels carry a phenylalanine warning).',
+    evidenceGrade: 'B',
+    regulatory: 'Each sweetener is individually approved with an acceptable daily intake (FDA and EFSA).',
+    sources: [
+      { org: 'FDA', title: 'Aspartame and Other Sweeteners in Food', url: 'https://www.fda.gov/food/food-additives-petitions/aspartame-and-other-sweeteners-food' },
+      { org: 'WHO', title: 'WHO guideline on non-sugar sweeteners (2023)', url: 'https://www.who.int/publications/i/item/9789240073616' },
+    ],
   },
 
   // ——— Preservatives ———
@@ -174,6 +186,12 @@ export const INGREDIENT_DB = [
     explanation: 'Synthetic antioxidants added in very small amounts, often to packaging or cereal grains.',
     evidence: 'Permitted at low levels by major regulators. Some studies in animals at very high doses raised questions, which is why intake limits exist; typical dietary exposure is far below those limits.',
     attention: 'Consumers who prefer to avoid synthetic preservatives can look for products using vitamin E (tocopherols) instead.',
+    evidenceGrade: 'D',
+    regulatory: 'Permitted with limits in the US and EU (E320/E321).',
+    sources: [
+      { org: 'FDA', title: 'Food Additive Status List', url: 'https://www.fda.gov/food/food-additives-petitions/food-additive-status-list' },
+      { org: 'EFSA', title: 'Scientific opinion on BHT (E321)', url: 'https://www.efsa.europa.eu/en/efsajournal/pub/2588' },
+    ],
   },
   {
     match: ['sodium benzoate', 'potassium sorbate', 'benzoic acid', 'sorbic acid'],
@@ -190,6 +208,12 @@ export const INGREDIENT_DB = [
     explanation: 'Curing salts used almost exclusively in processed meats like bacon, ham, and deli meat.',
     evidence: 'Regular high intake of processed meat is classified by IARC as associated with increased colorectal-cancer risk. Occasional consumption is a much smaller consideration than overall dietary pattern.',
     attention: 'People who eat processed meats frequently may benefit most from moderating intake.',
+    evidenceGrade: 'A',
+    regulatory: 'Permitted curing agents with strict limits (US/EU); IARC classifies processed meat as Group 1 based on colorectal-cancer association.',
+    sources: [
+      { org: 'WHO / IARC', title: 'Q&A on the carcinogenicity of the consumption of red meat and processed meat', url: 'https://www.who.int/news-room/questions-and-answers/item/cancer-carcinogenicity-of-the-consumption-of-red-meat-and-processed-meat' },
+      { org: 'FDA', title: 'Sodium nitrite listing, 21 CFR 172.175', url: 'https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-172/subpart-B/section-172.175' },
+    ],
   },
   {
     match: ['tocopherols', 'mixed tocopherols', 'rosemary extract'],
@@ -216,6 +240,12 @@ export const INGREDIENT_DB = [
     explanation: 'Certified synthetic dyes such as Red 40 or Yellow 5, added purely for appearance.',
     evidence: 'Approved by regulators at current intakes. Some studies suggest a small subset of children may show behavioral sensitivity to certain dyes, which is why some regions require warning labels; the evidence is mixed rather than conclusive.',
     attention: 'Parents of children who seem sensitive to dyes, and anyone who simply prefers dye-free foods, can look for products colored with fruit or vegetable extracts.',
+    evidenceGrade: 'C',
+    regulatory: 'FDA-certified colors (US); EU requires a warning label on several of these dyes.',
+    sources: [
+      { org: 'FDA', title: 'Color Additives in Foods', url: 'https://www.fda.gov/food/color-additives-information-consumers/color-additives-foods' },
+      { org: 'EFSA', title: 'Food colours re-evaluation', url: 'https://www.efsa.europa.eu/en/topics/topic/food-colours' },
+    ],
   },
   {
     match: ['annatto', 'turmeric', 'paprika extract', 'beta-carotene', 'beta carotene', 'beet juice', 'vegetable juice for color', 'caramel color'],
@@ -250,6 +280,11 @@ export const INGREDIENT_DB = [
     explanation: 'Glutamate-based flavor enhancers. Glutamate also occurs naturally in tomatoes, cheese, and mushrooms.',
     evidence: 'Extensive research has not confirmed that MSG causes harm at normal food levels; regulators consider it safe. A small number of people report mild, short-lived sensitivity.',
     attention: 'Individuals who notice sensitivity to MSG-rich meals. Hydrolyzed soy protein is relevant for soy allergy.',
+    evidenceGrade: 'A',
+    regulatory: 'GRAS in the US (E621 permitted in the EU).',
+    sources: [
+      { org: 'FDA', title: 'Questions and Answers on Monosodium Glutamate (MSG)', url: 'https://www.fda.gov/food/food-additives-petitions/questions-and-answers-monosodium-glutamate-msg' },
+    ],
   },
   {
     match: ['cocoa', 'cocoa powder', 'chocolate', 'cacao'],
@@ -274,6 +309,12 @@ export const INGREDIENT_DB = [
     explanation: 'Sodium chloride. The main source of sodium in packaged foods.',
     evidence: 'High habitual sodium intake is linked to raised blood pressure in salt-sensitive people. Guidelines suggest most adults stay under about 2,300 mg sodium per day.',
     attention: 'People with high blood pressure, kidney conditions, or on sodium-restricted diets — check the sodium line, not just the ingredient list.',
+    evidenceGrade: 'A',
+    regulatory: 'US Daily Value: 2,300 mg sodium; WHO recommends under 2,000 mg.',
+    sources: [
+      { org: 'FDA', title: 'Sodium in Your Diet', url: 'https://www.fda.gov/food/nutrition-education-resources-materials/sodium-your-diet' },
+      { org: 'WHO', title: 'Sodium reduction fact sheet', url: 'https://www.who.int/news-room/fact-sheets/detail/salt-reduction' },
+    ],
   },
 
   // ——— Emulsifiers, thickeners, texturizers ———
@@ -436,6 +477,12 @@ export const INGREDIENT_DB = [
     explanation: 'Oils solidified by hydrogenation. "Partially hydrogenated" oils were the main source of industrial trans fat.',
     evidence: 'Artificial trans fat raises heart-disease risk with no known safe intake, which is why partially hydrogenated oils are banned in the US and many regions. Fully hydrogenated oils and modern shortenings contain little or no trans fat but remain saturated-fat-heavy.',
     attention: 'Anyone watching heart health. If a label still says "partially hydrogenated," strongly consider an alternative product.',
+    evidenceGrade: 'A',
+    regulatory: 'Partially hydrogenated oils lost GRAS status in the US (2015 determination, phased out by 2020); WHO targets global elimination.',
+    sources: [
+      { org: 'FDA', title: 'Trans Fat', url: 'https://www.fda.gov/food/food-additives-petitions/trans-fat' },
+      { org: 'WHO', title: 'REPLACE trans fat initiative', url: 'https://www.who.int/teams/nutrition-and-food-safety/replace-trans-fat' },
+    ],
   },
   {
     match: ['quinoa', 'chia', 'flaxseed', 'flax seed', 'ground flax', 'sunflower seeds', 'pumpkin seeds', 'hemp seed', 'hemp hearts', 'millet', 'buckwheat', 'amaranth'],
@@ -498,6 +545,12 @@ export const INGREDIENT_DB = [
     explanation: 'A white mineral pigment.',
     evidence: 'The EU banned it as a food additive in 2022 over unresolved questions about nanoparticle accumulation; the US FDA still permits it. An honest summary: regulators disagree, and it adds nothing nutritionally.',
     attention: 'Easy to avoid if you prefer — it appears mostly in candies, gum, and white coatings.',
+    evidenceGrade: 'C',
+    regulatory: 'Banned in the EU (2022); permitted in the US — jurisdictions genuinely disagree.',
+    sources: [
+      { org: 'EFSA', title: 'Titanium dioxide: E171 no longer considered safe when used as a food additive', url: 'https://www.efsa.europa.eu/en/news/titanium-dioxide-e171-no-longer-considered-safe-when-used-food-additive' },
+      { org: 'FDA', title: 'Color Additives Status List', url: 'https://www.fda.gov/industry/color-additive-inventories/color-additive-status-list' },
+    ],
   },
   {
     match: ['vinegar', 'apple cider vinegar', 'white vinegar', 'distilled vinegar'],
@@ -575,6 +628,13 @@ export const ALLERGEN_EXCLUSIONS = {
     'hemp milk', 'pea milk', 'macadamia milk', 'flax milk',
   ],
 };
+
+// Fallback provenance for entries without their own citation list: the
+// general references this knowledge base is curated against.
+export const DEFAULT_SOURCES = [
+  { org: 'FDA', title: 'Food Additive & GRAS listings', url: 'https://www.fda.gov/food/food-ingredients-packaging' },
+  { org: 'USDA', title: 'FoodData Central', url: 'https://fdc.nal.usda.gov/' },
+];
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

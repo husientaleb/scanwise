@@ -11,8 +11,17 @@
 
 const MODEL = 'claude-sonnet-5';
 
-const SYSTEM_PROMPT = `You are the analysis engine for ScanWise, a consumer food-label app.
-You will receive a photo of a food label and/or user-confirmed label text.
+const SYSTEM_PROMPT = `You are the EXPLANATION layer of ScanWise, a consumer food-label app.
+You will receive a photo of a food label and/or user-confirmed label text, and often
+a "retrieved" block containing verified product-database records, reconciled fields,
+and knowledge-base ingredient entries with evidence grades.
+
+Your job is to read the label accurately, then summarize, explain in plain language,
+and communicate uncertainty. Your job is NOT to invent missing evidence, assign
+unverified regulatory status, estimate undisclosed ingredient quantities, diagnose
+disease, declare a product medically safe, or override deterministic calculations.
+When a "retrieved" block is present, prefer its facts over your own recall; when the
+label conflicts with a database record, the label wins.
 
 Rules you must follow:
 - Return ONLY valid JSON matching the schema provided. No markdown, no commentary.
@@ -69,7 +78,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { image, extracted } = req.body || {};
+    const { image, extracted, retrieved, validationErrors } = req.body || {};
     if (!image && !extracted) {
       res.status(400).json({ ok: false, error: 'Provide an image and/or extracted label text.' });
       return;
@@ -86,7 +95,11 @@ export default async function handler(req, res) {
     }
     content.push({
       type: 'text',
-      text: `Analyze this food label.${extracted ? `\nUser-confirmed text (authoritative where it conflicts with the image):\n${JSON.stringify(extracted)}` : ''}\nReturn JSON exactly matching this schema:\n${JSON_SCHEMA_HINT}`,
+      text: `Analyze this food label.` +
+        (extracted ? `\nUser-confirmed text (authoritative where it conflicts with the image):\n${JSON.stringify(extracted)}` : '') +
+        (retrieved ? `\nRetrieved verified data (prefer these facts; do not contradict them):\n${JSON.stringify(retrieved).slice(0, 12000)}` : '') +
+        (validationErrors ? `\nYour previous response failed schema validation with these errors — fix them:\n${JSON.stringify(validationErrors)}` : '') +
+        `\nReturn JSON exactly matching this schema:\n${JSON_SCHEMA_HINT}`,
     });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {

@@ -4,6 +4,7 @@
 import { esc, toast } from '../ui.js';
 import { session } from '../main.js';
 import { recognizeImage, sectionizeOcrText } from '../ocr.js';
+import { detectBarcodeInImage, normalizeBarcode } from '../barcode.js';
 
 const MAX_FILE_MB = 10;
 const MAX_DIM = 1600;
@@ -111,6 +112,7 @@ function goManual(keepImage = false) {
   if (!keepImage) {
     session.pendingImage = null;
     session.pendingThumbnail = null;
+    session.pendingBarcode = null;
   }
   session.pendingExtracted = {
     productName: '', brand: '', ingredientsText: '', nutritionText: '',
@@ -286,6 +288,18 @@ async function analyze(el) {
   const { full, thumbnail } = exportImages(el);
   session.pendingImage = full;
   session.pendingThumbnail = thumbnail;
+
+  // Stage: try to read a retail barcode from the photo (best-effort; the
+  // review screen always allows manual entry).
+  session.pendingBarcode = null;
+  try {
+    const canvas = el.querySelector('#preview-canvas');
+    const detected = await detectBarcodeInImage(canvas);
+    if (detected) {
+      const bc = normalizeBarcode(detected.rawValue);
+      session.pendingBarcode = { ...bc, confidence: bc.valid ? detected.confidence : 'low', source: 'detected' };
+    }
+  } catch { /* detection is optional */ }
 
   el.querySelector('#preview-area').hidden = true;
   const progress = el.querySelector('#ocr-progress');

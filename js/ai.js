@@ -18,43 +18,53 @@ const TIMEOUT_MS = 45000;
  * @returns {Promise<object>} schema-valid analysis
  * @throws {Error} with a user-friendly message when unavailable/invalid
  */
-export async function analyzeViaApi({ image, extracted }) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let res;
-  try {
-    res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ image: image || undefined, extracted }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    throw new Error(err.name === 'AbortError'
-      ? 'AI analysis timed out.'
-      : 'AI analysis is unreachable (offline or not deployed).');
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!res.ok) {
-    let msg = `AI analysis unavailable (HTTP ${res.status}).`;
+export async function analyzeViaApi({ image, extracted, retrieved }) {
+  // Fail-safe protocol: if the AI returns schema-invalid JSON, retry ONCE
+  // with the validation errors attached; if it fails again, the caller falls
+  // back to the deterministic report. Malformed output is never shown.
+  let validationErrors = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let res;
     try {
-      const body = await res.json();
-      if (body && body.error) msg = body.error;
-    } catch { /* non-JSON error body */ }
-    throw new Error(msg);
-  }
+      res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          image: image || undefined,
+          extracted,
+          retrieved: retrieved || undefined,
+          validationErrors: validationErrors || undefined,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      throw new Error(err.name === 'AbortError'
+        ? 'AI analysis timed out.'
+        : 'AI analysis is unreachable (offline or not deployed).');
+    } finally {
+      clearTimeout(timer);
+    }
 
-  const body = await res.json();
-  if (!body.ok || !body.analysis) throw new Error(body.error || 'AI analysis returned no result.');
+    if (!res.ok) {
+      let msg = `AI analysis unavailable (HTTP ${res.status}).`;
+      try {
+        const body = await res.json();
+        if (body && body.error) msg = body.error;
+      } catch { /* non-JSON error body */ }
+      throw new Error(msg);
+    }
 
-  const check = validateAnalysis(body.analysis);
-  if (!check.ok) {
-    console.warn('AI analysis failed schema validation:', check.errors);
-    throw new Error('The AI response did not match the expected format.');
+    const body = await res.json();
+    if (!body.ok || !body.analysis) throw new Error(body.error || 'AI analysis returned no result.');
+
+    const check = validateAnalysis(body.analysis);
+    if (check.ok) return body.analysis;
+    console.warn(`AI analysis failed schema validation (attempt ${attempt + 1}):`, check.errors);
+    validationErrors = check.errors;
   }
-  return body.analysis;
+  throw new Error('The AI response did not match the expected format after a retry.');
 }
 
 /**
@@ -67,9 +77,9 @@ export async function analyzeViaApi({ image, extracted }) {
  * @param {function} localAnalyze  the local analyzeProduct function (injected to avoid a cycle)
  * @returns {Promise<{ analysis, scoreDetail, engine: 'ai'|'local', engineNote: string }>}
  */
-export async function analyzeWithFallback(input, image, prefs, localAnalyze) {
+export async function analyzeWithFallback(input, image, prefs, localAnalyze, retrieved = null) {
   try {
-    const aiAnalysis = await analyzeViaApi({ image, extracted: input });
+    const aiAnalysis = await analyzeViaApi({ image, extracted: input, retrieved });
     // Recompute the score transparently from the AI's extracted data.
     const scoreDetail = scoreProduct(aiAnalysis.nutrition, aiAnalysis.ingredients, prefs);
     const analysis = {

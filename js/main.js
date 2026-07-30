@@ -18,6 +18,7 @@ export const session = {
   pendingImage: null,      // data URL of the (possibly cropped/rotated) label photo
   pendingThumbnail: null,  // small jpeg for history
   pendingExtracted: null,  // { productName, brand, ingredientsText, nutritionText, source }
+  pendingBarcode: null,    // { original, normalized, format, valid, confidence, source }
 };
 
 const routes = [

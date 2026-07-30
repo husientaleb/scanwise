@@ -74,28 +74,61 @@ Then open `http://localhost:8080/` (app) and `http://localhost:8080/tests/tests.
 See `.env.example`. **All keys are server-side only** — nothing secret ships to
 the client.
 
-## How analysis works
+## The research pipeline
 
-1. **Capture** — camera/upload with preview, rotate, and drag-to-crop (or manual
-   text entry). Max 10 MB; unsupported files are rejected with clear messages.
-2. **OCR** — Tesseract.js runs on-device; text is sectioned into product name /
-   ingredients / nutrition heuristically.
-3. **Review** — the user corrects the extracted text before anything is analyzed.
-   Unreadable fields stay blank; ScanWise never invents label data.
-4. **Analyze** — the client first tries `/api/analyze` (AI-assisted reading,
-   45 s timeout); on any failure — static hosting, no key, offline, invalid AI
-   JSON — it falls back seamlessly to the on-device engine. **Whichever engine
-   runs, the score is always computed locally by the transparent rubric; the AI
-   explains, it never grades.** Each report shows which engine produced it.
-   Locally, `analyzer.js` parses ingredients (knowledge-base lookup),
-   nutrition numbers, and the nine major allergens, then `scoring.js` produces a
-   transparent score: start at 7, apply visible adjustments (e.g. "High added
-   sugar (14 g): −1.5", "Good fiber: +0.5"), clamp to 1–10. Missing data lowers
-   *confidence*, never the score itself.
-5. **Report** — score ring + label, "why this score" breakdown, key findings
-   (max 5), allergen alerts (independent of the score), nutrition cards with
-   low/moderate/high context, expandable ingredient cards, alternative-shopping
-   guidance, and explicit limitations.
+ScanWise is a staged evidence-retrieval and analysis pipeline, not a single AI
+call. Every report distinguishes: what the package says, what a verified
+database says, what the app calculated, what the AI explained, and what is
+unknown.
+
+1. **Capture** — camera/upload with preview, rotate, drag-to-crop (or manual
+   entry). Missing regions are stated explicitly ("Nutrition Facts panel not
+   captured"), never papered over.
+2. **Barcode** (`barcode.js`) — UPC-A/EAN-8/EAN-13/GTIN-14 normalization and
+   GS1 check-digit validation, UPC-E expansion, platform `BarcodeDetector`
+   auto-detection from the photo, manual entry always available.
+3. **Verified product lookup** (`product-db.js`) — local cache (7-day TTL) →
+   Open Food Facts → (USDA FDC / licensed DBs as future config). Web-search
+   snippets are never product data. Per-100g values are converted to
+   per-serving only when the record discloses a serving size — flagged as a
+   calculation.
+4. **Product matching** (`matching.js` + `match-config.js`) — the database hit
+   is verified against label data across weighted signals (barcode 0.40,
+   name/brand 0.20, ingredients 0.15, size 0.10, nutrition 0.10, image 0.05 —
+   all configurable). Barcode-only hits are never auto-confirmed.
+5. **OCR** — Tesseract.js on-device, sectioned, user-reviewed before analysis.
+6. **Reconciliation** (`reconcile.js`) — field-level label-vs-database records:
+   the package label always wins, the database fills only invisible fields,
+   conflicts are surfaced ("the database record may be outdated"), and missing
+   stays null — never zero.
+7. **Ingredient parsing** (`ingredient-parser.js`) — hierarchical: compound
+   ingredients yield sub-ingredient records with parent links, order, and
+   depth; "contains 2% or less" is tracked; "Contains/May contain/facility"
+   advisories are separated from ingredients.
+8. **Normalization** (`normalize.js`) — E-numbers (E322 → lecithins) and
+   synonyms (ascorbic acid → vitamin C, HFCS merge) WITHOUT erasing
+   distinctions (nitrite ≠ nitrate; B12 forms stay identifiable). Uncertain
+   normalizations are marked unconfirmed.
+9. **Knowledge base** (`ingredients-db.js`) — curated entries with category,
+   function, evidence summary, **evidence grade (A–E / Unknown)**, regulatory
+   status by jurisdiction, and source citations (FDA/EFSA/WHO/USDA links).
+   Hazard is separated from real-world risk; ingredient quantities are never
+   estimated from the list alone.
+10. **Deterministic calculation** (`nutrition-calc.js` + `dv-constants.js`) —
+    %DV against configurable jurisdiction constants (value, unit, effective
+    date, source), per-container math only when servings are known, with an
+    audit trail of every calculation.
+11. **Transparent scoring** (`scoring.js`) — start at 7, visible adjustments,
+    clamp 1–10. Points are never subtracted for chemical-sounding names,
+    synthetic origin, or unfamiliarity alone.
+12. **Multi-dimension assessment** (`assessment.js`) — nutrition profile,
+    ingredient transparency, degree of processing (descriptive), allergen
+    suitability (never folded into a score), preference match, data
+    completeness, match confidence.
+13. **AI as explanation layer only** (`ai.js` + `api/analyze.js`) — the model
+    receives reconciled data + retrieved records, must return schema-valid
+    JSON, gets ONE retry with validation errors, then the deterministic
+    report ships without an AI summary. The AI never chooses the score.
 
 The AI endpoint (`api/analyze.js`) must return JSON matching `js/schema.js`;
 invalid AI JSON is rejected, not displayed.

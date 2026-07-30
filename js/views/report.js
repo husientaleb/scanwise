@@ -7,6 +7,8 @@ import {
 } from '../ui.js';
 import { nutrientLevel } from '../scoring.js';
 import { analyzeProduct } from '../analyzer.js';
+import { computeDimensions } from '../assessment.js';
+import { calculateNutrition } from '../nutrition-calc.js';
 import {
   getScan, getScans, saveScan, deleteScan, deleteScanImage, toggleFavorite,
   getPrefs, newId, PREF_ALLERGEN_MAP, PREF_LABELS,
@@ -45,6 +47,64 @@ export function runDemoScan(demoId) {
   };
   saveScan(scan);
   location.hash = `#/report/${scan.id}`;
+}
+
+/** Product identification & data-provenance card (pipeline scans only). */
+function productIdHtml(scan) {
+  const pipe = scan.pipeline;
+  if (!pipe || (!pipe.barcode && !pipe.product)) return '';
+  const m = pipe.match;
+  const conflicts = (pipe.reconciliation || []).filter((r) => r.conflict);
+  const statusCls = m ? (m.status === 'confirmed' ? 'badge-green' : m.status === 'probable' ? 'badge-blue' : 'badge-amber') : 'badge-gray';
+  return `
+    <section class="card" aria-labelledby="pid2-title">
+      <h2 id="pid2-title">Product identification</h2>
+      <div class="stack" style="gap:8px;">
+        ${pipe.barcode ? `<div class="row-between"><span class="small">Barcode (${esc(pipe.barcode.format || '?')})</span><span class="small"><code>${esc(pipe.barcode.normalized)}</code> ${pipe.barcode.valid ? '✓' : '⚠ check digit'}</span></div>` : ''}
+        ${pipe.product ? `
+          <div class="row-between"><span class="small">Database record</span><span class="small">Open Food Facts</span></div>
+          <div class="row-between"><span class="small">Match</span><span class="badge ${statusCls}">${esc(m.statusLabel)} · ${Math.round(m.score * 100)}%</span></div>
+          <div class="row-between"><span class="small">Retrieved</span><span class="small">${esc(formatDate(pipe.product.retrievedAt))}</span></div>
+        ` : (pipe.barcode ? '<p class="small muted" style="margin:0;">No verified database record — this report is based on the photographed label only.</p>' : '')}
+        ${conflicts.length ? `
+          <div style="border-top:1px solid var(--surface-2); padding-top:8px;">
+            <p class="small" style="margin:0 0 6px;"><strong>Label vs. database — ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}</strong> (your package label was used; the database record may be outdated):</p>
+            ${conflicts.map((c) => `<p class="small muted" style="margin:0;">• ${esc(c.field)}: label ${esc(String(c.labelValue))} vs database ${esc(String(c.databaseValue))}</p>`).join('')}
+          </div>` : ''}
+        ${(pipe.reconciliation || []).some((r) => r.selectedSource === 'product_database') ? `
+          <p class="small muted" style="margin:0;">Fields filled from the database (not visible on your photo): ${
+            pipe.reconciliation.filter((r) => r.selectedSource === 'product_database').map((r) => esc(r.field)).join(', ')}.</p>` : ''}
+        ${pipe.product?.nutritionBasis === 'derived_from_100g' ? `
+          <p class="small muted" style="margin:0;">Database nutrition was converted from per-100g values using the disclosed serving size (${esc(String(pipe.product.servingGrams))} g) — a calculation, not a label reading.</p>` : ''}
+      </div>
+    </section>`;
+}
+
+/** Multi-dimension assessment card. */
+function dimensionsHtml(scan, prefs) {
+  const dims = computeDimensions({
+    analysis: scan.analysis,
+    scoreDetail: scan.scoreDetail,
+    prefs,
+    reconciliation: scan.pipeline?.reconciliation || null,
+    match: scan.pipeline?.matchAccepted ? scan.pipeline.match : null,
+  });
+  if (!dims.length) return '';
+  return `
+    <section class="card" aria-labelledby="dims-title">
+      <h2 id="dims-title">At a glance</h2>
+      <div class="stack" style="gap:8px;">
+        ${dims.map((d) => `
+          <div class="row-between" style="align-items:flex-start;">
+            <span class="small" style="flex:1;">
+              <strong>${esc(d.label)}</strong>
+              <span class="muted" style="display:block;">${esc(d.note)}</span>
+            </span>
+            <span class="badge ${d.alert ? 'badge-red' : 'badge-blue'}" style="white-space:normal;text-align:right;">${esc(d.display)}</span>
+          </div>`).join('')}
+      </div>
+      <p class="small muted" style="margin:10px 0 0;">A product can do well on one dimension and poorly on another — that's the honest picture.</p>
+    </section>`;
 }
 
 /** Diet & lifestyle card: shows what the ingredient database flagged for
@@ -133,6 +193,7 @@ export function renderReport(el, scanId) {
   const a = scan.analysis;
   const sd = scan.scoreDetail || { adjustments: [], confidence: 'low', confidenceNote: '' };
   const prefs = getPrefs();
+  const nutriCalc = calculateNutrition(a.nutrition);
 
   // Personal allergy/avoidance alerts driven by preferences.
   const prefAlerts = Object.entries(PREF_ALLERGEN_MAP)
@@ -171,6 +232,9 @@ export function renderReport(el, scanId) {
       ${scan.engine ? `<p class="small muted" style="margin:8px 0 0;">${scan.engine === 'ai' ? '✨' : '🔧'} ${esc(scan.engineNote || '')}</p>` : ''}
     </section>
 
+    ${productIdHtml(scan)}
+    ${dimensionsHtml(scan, prefs)}
+
     <section class="card" aria-labelledby="score-why-title">
       <h2 id="score-why-title">Why this score</h2>
       <p class="small muted">Transparent scoring: every product starts at 7, then visible adjustments are applied.</p>
@@ -208,6 +272,11 @@ export function renderReport(el, scanId) {
         ? `<p class="small">Detected major allergens:</p>
            <p>${a.allergens.map((al) => `<span class="badge badge-amber" style="margin:0 6px 6px 0;">${esc(al)}</span>`).join('')}</p>`
         : '<p class="small muted">No major allergens were detected in the text we read — but detection depends on label quality.</p>'}
+      ${(a.advisories || []).length ? `
+        <div style="margin-bottom:8px;">
+          <p class="small" style="margin:0 0 4px;"><strong>Advisory statements on the label:</strong></p>
+          ${a.advisories.map((adv) => `<p class="small muted" style="margin:0;">• ${esc(adv.text)} <span class="badge badge-gray">${esc(adv.type.replace(/_/g, ' '))}</span></p>`).join('')}
+        </div>` : ''}
       <p class="small muted" style="margin:0;">${esc(ALLERGY_WARNING)}</p>
     </section>
 
@@ -220,15 +289,17 @@ export function renderReport(el, scanId) {
         ${NUTRIENT_META.map(([key, label, , unit]) => {
           const val = a.nutrition[key];
           const lvl = nutrientLevel(key, val);
+          const dv = nutriCalc.percentDV[key];
           return `
             <div class="nutri-cell">
               <div class="nutri-name">${label}</div>
               <div class="nutri-value">${val === null ? '—' : `${esc(val)} ${key === 'calories' ? '' : unit}`}</div>
               ${levelBadge(lvl)}
+              ${dv !== null && key !== 'calories' ? `<span class="small muted" style="display:block;margin-top:4px;">${dv}% DV</span>` : ''}
             </div>`;
         }).join('')}
       </div>
-      <p class="small muted" style="margin:10px 0 0;">"Low / moderate / high" are general per-serving ranges based on public dietary guidelines — context, not a diagnosis.</p>
+      <p class="small muted" style="margin:10px 0 0;">"Low / moderate / high" are general per-serving ranges based on public dietary guidelines — context, not a diagnosis. %DV computed against ${esc(nutriCalc.jurisdiction)} Daily Values (<a href="${esc(nutriCalc.dvSource.url)}" target="_blank" rel="noopener">${esc(nutriCalc.dvSource.organization)}</a>, effective ${esc(nutriCalc.dvEffectiveDate)}).</p>
     </section>
 
     <section class="card" aria-labelledby="ing-title">
