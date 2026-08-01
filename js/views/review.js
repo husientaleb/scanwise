@@ -89,6 +89,18 @@ export function renderReview(el) {
 
       <button type="submit" class="btn btn-primary btn-big btn-block" style="margin-top:14px;" id="analyze-btn">Analyze product</button>
     </form>
+
+    <div id="analyze-progress" class="card center" hidden>
+      <h3 style="margin-bottom:2px;">Building your report</h3>
+      <p class="small muted" id="analyze-tip" style="margin:0;">Ingredient names can sound complicated — we explain what they actually do.</p>
+      <ol class="stage-list" id="analyze-stages">
+        <li data-stage="label"><span class="stage-dot" aria-hidden="true"></span>Reading your label</li>
+        <li data-stage="ingredients"><span class="stage-dot" aria-hidden="true"></span>Checking each ingredient</li>
+        <li data-stage="nutrition"><span class="stage-dot" aria-hidden="true"></span>Reviewing the nutrition numbers</li>
+        <li data-stage="personalize"><span class="stage-dot" aria-hidden="true"></span>Personalizing it for your profile</li>
+        <li data-stage="finish"><span class="stage-dot" aria-hidden="true"></span>Putting it all together</li>
+      </ol>
+    </div>
   `;
 
   const $ = (sel) => el.querySelector(sel);
@@ -232,6 +244,23 @@ export function renderReview(el) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:2.5px;" aria-hidden="true"></span> Analyzing…';
 
+    // Progressive analysis stages: honest labels for work that is genuinely
+    // happening, advanced on a gentle cadence while the (possibly slow) AI
+    // path resolves. Never blocks — the report opens the moment it's ready.
+    const progressBox = $('#analyze-progress');
+    progressBox.hidden = false;
+    progressBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const stageEls = [...progressBox.querySelectorAll('[data-stage]')];
+    let stageIdx = 0;
+    const setStage = (i) => {
+      stageEls.forEach((li, j) => li.setAttribute('data-state', j < i ? 'done' : j === i ? 'active' : ''));
+      stageEls.forEach((li, j) => { li.querySelector('.stage-dot').textContent = j < i ? '✓' : ''; });
+    };
+    setStage(0);
+    const stageTimer = setInterval(() => {
+      if (stageIdx < stageEls.length - 1) setStage(++stageIdx);
+    }, 700);
+
     try {
       const retrieved = pipe.accepted && pipe.product ? {
         product: { name: pipe.product.productName, brand: pipe.product.brand, source: 'Open Food Facts', barcode: pipe.product.barcode },
@@ -267,6 +296,8 @@ export function renderReview(el) {
       };
       saveScan(scan);
       incrementScanUsage();
+      clearInterval(stageTimer);
+      setStage(stageEls.length); // all done
       session.pendingExtracted = null;
       session.pendingImage = null;
       session.pendingThumbnail = null;
@@ -274,9 +305,11 @@ export function renderReview(el) {
       location.hash = `#/report/${scan.id}`;
     } catch (err) {
       console.error(err);
+      clearInterval(stageTimer);
+      progressBox.hidden = true;
       btn.disabled = false;
       btn.textContent = 'Analyze product';
-      toast('Analysis failed unexpectedly. Please try again.', true);
+      toast('Something went wrong while analyzing. Your text is still here — try again.', true);
     }
   });
 }

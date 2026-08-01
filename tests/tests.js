@@ -19,7 +19,7 @@ import { analyzeClaims } from '../js/claims.js';
 import { improvement, MIN_IMPROVEMENT, ALT_CRITERIA } from '../js/alternatives.js';
 import { DEMO_PRODUCTS } from '../js/demo-data.js';
 import { monthKey, getScanUsage, incrementScanUsage, FREE_SCANS_PER_MONTH } from '../js/store.js';
-import { buildShareText } from '../js/views/report.js';
+import { buildShareText, buildHeadline } from '../js/views/report.js';
 
 const results = [];
 function test(name, fn) {
@@ -585,6 +585,24 @@ test('scan usage increments and resets across months', () => {
     if (saved === null) localStorage.removeItem('scanwise.usage.v1');
     else localStorage.setItem('scanwise.usage.v1', saved);
   }
+});
+
+// ——— report headline ———
+
+test('buildHeadline balances the top positive and negative', () => {
+  const sd = { adjustments: [
+    { reason: 'High added sugar (14 g per serving)', delta: -1.5 },
+    { reason: 'Excellent source of fiber (5 g per serving)', delta: 1 },
+    { reason: 'You asked to prioritize lower sugar', delta: -0.5, personalized: true },
+  ] };
+  const h = buildHeadline(sd, { overallLabel: 'Reasonable choice' });
+  assertEq(h, 'Excellent source of fiber, but high added sugar', 'balanced headline, no parentheticals, no personalized noise');
+});
+
+test('buildHeadline falls back gracefully', () => {
+  assertEq(buildHeadline({ adjustments: [] }, { overallLabel: 'Reasonable choice' }), 'Reasonable choice', 'no adjustments → label');
+  const negOnly = buildHeadline({ adjustments: [{ reason: 'High sodium (600 mg per serving)', delta: -1 }] }, { overallLabel: 'x' });
+  assertEq(negOnly, 'High sodium stands out', 'negative-only phrasing');
 });
 
 // ——— share text ———

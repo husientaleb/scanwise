@@ -62,7 +62,7 @@ function productIdHtml(scan) {
   const conflicts = (pipe.reconciliation || []).filter((r) => r.conflict);
   const statusCls = m ? (m.status === 'confirmed' ? 'badge-green' : m.status === 'probable' ? 'badge-blue' : 'badge-amber') : 'badge-gray';
   return `
-    <section class="card" aria-labelledby="pid2-title">
+    <section class="card" aria-labelledby="pid2-title" data-depth="full">
       <h2 id="pid2-title">Product identification</h2>
       <div class="stack" style="gap:8px;">
         ${pipe.barcode ? `<div class="row-between"><span class="small">Barcode (${esc(pipe.barcode.format || '?')})</span><span class="small"><code>${esc(pipe.barcode.normalized)}</code> ${pipe.barcode.valid ? '✓' : '⚠ check digit'}</span></div>` : ''}
@@ -96,7 +96,7 @@ function dimensionsHtml(scan, prefs, sd, viewScore) {
   });
   if (!dims.length) return '';
   return `
-    <section class="card" aria-labelledby="dims-title">
+    <section class="card" aria-labelledby="dims-title" data-depth="full">
       <h2 id="dims-title">At a glance</h2>
       <div class="stack" style="gap:8px;">
         ${dims.map((d) => `
@@ -146,7 +146,7 @@ function claimsHtml(scan, a) {
   const claims = analyzeClaims(claimsText, a);
   if (!claims.length) return '';
   return `
-    <section class="card" aria-labelledby="claims-title">
+    <section class="card" aria-labelledby="claims-title" data-depth="full">
       <h2 id="claims-title">Claims check</h2>
       <p class="small muted">Front-of-package claims compared with the verified label — what's regulated, what's marketing, and what the numbers actually show.</p>
       <div class="stack">
@@ -194,7 +194,7 @@ function dietCheckHtml(a, prefs) {
 
   if (!rows.length) return '';
   return `
-    <section class="card" aria-labelledby="diet-title">
+    <section class="card" aria-labelledby="diet-title" data-depth="full">
       <h2 id="diet-title">Diet check</h2>
       <div class="stack">${rows.join('')}</div>
       <p class="small muted" style="margin:10px 0 0;">Based only on ingredients our database recognizes — "nothing flagged" is a helpful signal, not a certification. Malt and rye contain gluten without triggering a wheat allergen statement.</p>
@@ -226,6 +226,20 @@ export function buildShareText(scan) {
   lines.push('', 'Shared from ScanWise — general educational information, not medical advice. Always check the package label.');
   return lines.join('\n');
 }
+
+/** One-line plain-language headline: the report's five-second takeaway. */
+export function buildHeadline(sd, analysis) {
+  const clean = (reason) => reason.replace(/\s*\([^)]*\)/g, '').toLowerCase().trim();
+  const negs = sd.adjustments.filter((a) => a.delta < 0 && !a.personalized).sort((a, b) => a.delta - b.delta);
+  const poss = sd.adjustments.filter((a) => a.delta > 0 && !a.personalized).sort((a, b) => b.delta - a.delta);
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  if (poss.length && negs.length) return `${cap(clean(poss[0].reason))}, but ${clean(negs[0].reason)}`;
+  if (negs.length) return `${cap(clean(negs[0].reason))} stands out`;
+  if (poss.length) return `${cap(clean(poss[0].reason))}`;
+  return analysis.overallLabel;
+}
+
+const VIEW_KEY = 'scanwise.reportview.v1';
 
 const NUTRIENT_META = [
   ['calories', 'Calories', '', 'kcal'],
@@ -306,16 +320,24 @@ export function renderReport(el, scanId, opts = {}) {
           <p class="small muted" style="margin:0;">${esc(sd.confidenceNote || '')}</p>
         </div>
       </div>
-      <p style="margin-top:14px;">${esc(a.summary)}</p>
+      <div class="headline-card">
+        <p class="headline">${esc(buildHeadline(sd, a))}</p>
+      </div>
+      <p style="margin:0 0 8px;">${esc(a.summary)}</p>
       ${a.allergens.length ? '<p class="small muted" style="margin:0;">This score reflects general nutrition only — it says nothing about allergy safety. See the allergy section below.</p>' : ''}
-      ${scan.engine ? `<p class="small muted" style="margin:8px 0 0;">${scan.engine === 'ai' ? '✨' : '🔧'} ${esc(scan.engineNote || '')}</p>` : ''}
+      ${scan.engine ? `<p class="small muted" data-depth="full" style="margin:8px 0 0;">${scan.engine === 'ai' ? '✨' : '🔧'} ${esc(scan.engineNote || '')}</p>` : ''}
     </section>
+
+    <div class="seg" role="group" aria-label="Report detail level">
+      <button id="seg-quick" aria-pressed="false">Quick view</button>
+      <button id="seg-full" aria-pressed="false">Full analysis</button>
+    </div>
 
     ${productIdHtml(scan)}
     ${dimensionsHtml(scan, prefs, sd, viewScore)}
     ${claimsHtml(scan, a)}
 
-    <section class="card" aria-labelledby="score-why-title">
+    <section class="card" aria-labelledby="score-why-title" data-depth="full">
       <h2 id="score-why-title">Why this score</h2>
       <p class="small muted">Transparent scoring: every product starts at 7, then visible adjustments are applied.${
         a.category && a.category.key !== 'general'
@@ -385,11 +407,20 @@ export function renderReport(el, scanId, opts = {}) {
       <p class="small muted" style="margin:10px 0 0;">"Low / moderate / high" are general per-serving ranges based on public dietary guidelines — context, not a diagnosis. %DV computed against ${esc(nutriCalc.jurisdiction)} Daily Values (<a href="${esc(nutriCalc.dvSource.url)}" target="_blank" rel="noopener">${esc(nutriCalc.dvSource.organization)}</a>, effective ${esc(nutriCalc.dvEffectiveDate)}).</p>
     </section>
 
-    <section class="card" aria-labelledby="ing-title">
+    <section class="card" aria-labelledby="ing-title" data-depth="full">
       <h2 id="ing-title">Ingredients (${a.ingredients.length})</h2>
       ${a.ingredients.length === 0
         ? '<p class="small muted">No ingredient list was available for this scan.</p>'
         : `<p class="small muted">Tap any ingredient for a plain-language explanation.</p>
+           ${a.ingredients.length > 6 ? `
+             <input type="search" id="ing-search" placeholder="Search ingredients…" aria-label="Search ingredients" style="margin-bottom:10px;" />` : ''}
+           <div class="row" style="flex-wrap:wrap; gap:6px; margin-bottom:10px;" role="group" aria-label="Filter ingredients">
+             <button class="chip" data-ing-filter="all" aria-pressed="true">All (${a.ingredients.length})</button>
+             ${a.ingredients.some((i) => i.allergen) ? `<button class="chip" data-ing-filter="allergens" aria-pressed="false">Allergens</button>` : ''}
+             ${a.ingredients.some((i) => i.category === 'Sweetener') ? `<button class="chip" data-ing-filter="sweeteners" aria-pressed="false">Sweeteners</button>` : ''}
+             ${a.ingredients.some((i) => ['Preservative', 'Color', 'Emulsifier'].includes(i.category)) ? `<button class="chip" data-ing-filter="additives" aria-pressed="false">Additives</button>` : ''}
+             ${a.ingredients.some((i) => i.concernLevel === 'unknown') ? `<button class="chip" data-ing-filter="unknown" aria-pressed="false">Not in database</button>` : ''}
+           </div>
            <div id="ing-list">${a.ingredients.map((ing, i) => ingredientCard(ing, i)).join('')}</div>`}
     </section>
 
@@ -417,14 +448,14 @@ export function renderReport(el, scanId, opts = {}) {
     </section>
 
     ${a.limitations.length ? `
-      <section class="card" aria-labelledby="lim-title">
+      <section class="card" aria-labelledby="lim-title" data-depth="full">
         <h2 id="lim-title">Limitations of this report</h2>
         <ul style="margin:0; padding-left:20px;">
           ${a.limitations.map((l) => `<li class="small muted">${esc(l)}</li>`).join('')}
         </ul>
       </section>` : ''}
 
-    <section class="card">
+    <section class="card" data-depth="full">
       <h2>Manage this scan</h2>
       <div class="stack">
         <button class="btn btn-secondary" id="btn-share">Share this report</button>
@@ -437,6 +468,57 @@ export function renderReport(el, scanId, opts = {}) {
   `;
 
   bindIngredientCards(el);
+
+  // Quick view / Full analysis toggle (last choice remembered).
+  const applyView = (mode) => {
+    el.querySelectorAll('[data-depth="full"]').forEach((sec) => { sec.hidden = mode === 'quick'; });
+    el.querySelector('#seg-quick')?.setAttribute('aria-pressed', String(mode === 'quick'));
+    el.querySelector('#seg-full')?.setAttribute('aria-pressed', String(mode === 'full'));
+    try { localStorage.setItem(VIEW_KEY, mode); } catch { /* fine */ }
+  };
+  let viewMode = 'full';
+  try { viewMode = localStorage.getItem(VIEW_KEY) || 'full'; } catch { /* fine */ }
+  applyView(viewMode);
+  el.querySelector('#seg-quick')?.addEventListener('click', () => applyView('quick'));
+  el.querySelector('#seg-full')?.addEventListener('click', () => applyView('full'));
+
+  // Ingredient filter chips + search.
+  const ingFilters = {
+    all: () => true,
+    allergens: (i) => !!i.allergen,
+    sweeteners: (i) => i.category === 'Sweetener',
+    additives: (i) => ['Preservative', 'Color', 'Emulsifier'].includes(i.category),
+    unknown: (i) => i.concernLevel === 'unknown',
+  };
+  let ingFilter = 'all';
+  let ingQuery = '';
+  const redrawIngredients = () => {
+    const list = el.querySelector('#ing-list');
+    if (!list) return;
+    const q = ingQuery.toLowerCase();
+    const shown = a.ingredients
+      .map((ing, i) => ({ ing, i }))
+      .filter(({ ing }) => ingFilters[ingFilter](ing))
+      .filter(({ ing }) => !q ||
+        ing.name.toLowerCase().includes(q) ||
+        (ing.rawName || '').toLowerCase().includes(q) ||
+        (ing.normalizedName || '').toLowerCase().includes(q));
+    list.innerHTML = shown.length
+      ? shown.map(({ ing, i }) => ingredientCard(ing, i)).join('')
+      : '<p class="small muted">No ingredients match this filter.</p>';
+    bindIngredientCards(list);
+  };
+  el.querySelectorAll('[data-ing-filter]').forEach((chipBtn) =>
+    chipBtn.addEventListener('click', () => {
+      ingFilter = chipBtn.dataset.ingFilter;
+      el.querySelectorAll('[data-ing-filter]').forEach((c) =>
+        c.setAttribute('aria-pressed', String(c === chipBtn)));
+      redrawIngredients();
+    }));
+  el.querySelector('#ing-search')?.addEventListener('input', (e) => {
+    ingQuery = e.target.value.trim();
+    redrawIngredients();
+  });
 
   el.querySelectorAll('[data-view-profile]').forEach((btn) =>
     btn.addEventListener('click', () => renderReport(el, scanId, { profileId: btn.dataset.viewProfile })));

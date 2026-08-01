@@ -91,15 +91,18 @@ export async function analyzeWithFallback(input, image, prefs, localAnalyze, ret
       analysis,
       scoreDetail,
       engine: 'ai',
-      engineNote: 'AI-assisted reading, validated against the ScanWise schema. Score computed by the transparent ScanWise rubric.',
+      engineNote: 'Read with AI assistance and double-checked against ScanWise\'s format. The score always comes from the transparent ScanWise rubric.',
     };
   } catch (err) {
+    // Keep the technical detail in the console for debugging, but never in
+    // the consumer-facing report.
+    console.info('AI analysis unavailable, using on-device engine:', err.message);
     const { analysis, scoreDetail } = localAnalyze(input, prefs);
     return {
       analysis,
       scoreDetail,
       engine: 'local',
-      engineNote: `Analyzed with the built-in ScanWise engine on your device. (AI path: ${err.message})`,
+      engineNote: 'Analyzed on your device with ScanWise\'s built-in engine.',
     };
   }
 }
