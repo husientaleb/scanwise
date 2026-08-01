@@ -10,6 +10,7 @@ import { analyzeProduct } from '../analyzer.js';
 import { computeDimensions } from '../assessment.js';
 import { calculateNutrition } from '../nutrition-calc.js';
 import { analyzeClaims, VERDICT_META } from '../claims.js';
+import { findAlternatives, ALT_CRITERIA } from '../alternatives.js';
 import {
   getScan, getScans, saveScan, deleteScan, deleteScanImage, toggleFavorite,
   getPrefs, newId, PREF_ALLERGEN_MAP, PREF_LABELS, DEFAULT_PREFS,
@@ -109,6 +110,34 @@ function dimensionsHtml(scan, prefs, sd, viewScore) {
       </div>
       <p class="small muted" style="margin:10px 0 0;">A product can do well on one dimension and poorly on another — that's the honest picture.</p>
     </section>`;
+}
+
+/** Render verified-alternative search results. */
+function renderAltResults(result, criterionKey) {
+  const c = ALT_CRITERIA[criterionKey];
+  if (!result.alternatives.length) {
+    return `<p class="small muted">${esc(result.note || 'No verified alternatives found.')}</p>`;
+  }
+  return `
+    <div class="stack">
+      ${result.alternatives.map((alt) => `
+        <div style="border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:12px;">
+          <div class="row" style="align-items:flex-start;">
+            ${alt.imageUrl ? `<img src="${esc(alt.imageUrl)}" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:#fff;flex:none;" />` : ''}
+            <div style="flex:1;min-width:0;">
+              <strong class="small">${esc(alt.productName)}</strong>
+              <p class="small muted" style="margin:0;">${esc(alt.brand)}${alt.packageSize ? ` · ${esc(alt.packageSize)}` : ''}</p>
+            </div>
+            <span class="badge badge-green" style="flex:none;">${alt.improvementPct}% ${c.direction === 'lower' ? 'less' : 'more'} ${esc(alt.comparedField)}</span>
+          </div>
+          <p class="small muted" style="margin:8px 0 0;">
+            Why: ${esc(String(alt.candidateValue))} vs ${esc(String(alt.baselineValue))} ${alt.comparedField === 'sodium' ? 'mg' : 'g'} per 100 g.
+            Source: ${esc(alt.source)}${alt.sourceLastUpdated ? `, updated ${esc(formatDate(alt.sourceLastUpdated))}` : ''} · retrieved ${esc(formatDate(alt.retrievedAt))} ·
+            <span class="badge badge-amber" style="font-size:0.7rem;">Moderate confidence</span>
+          </p>
+        </div>`).join('')}
+      <p class="small muted" style="margin:0;">Community-verified data (${result.candidateCount} products searched). Availability and prices are unknown; always verify the package in-store, especially for allergies.</p>
+    </div>`;
 }
 
 /** Marketing-claims check card. */
@@ -373,7 +402,17 @@ export function renderReport(el, scanId, opts = {}) {
             <p class="small" style="margin:0;">${esc(g)}</p>
           </div>`).join('')}
       </div>
-      <p class="small muted" style="margin-top:12px;">Barcode lookup and store-specific suggestions are coming in a future version — for now these are label-reading strategies, not specific product endorsements.</p>
+      ${scan.pipeline?.product?.categoryTagsRaw?.length ? `
+        <div style="border-top:1px solid var(--surface-2); margin-top:14px; padding-top:12px;">
+          <h3 style="font-size:0.95rem;">Verified alternatives in this category</h3>
+          <p class="small muted">Searches Open Food Facts for products with structured data at least 25% better per 100 g. No prices or availability — those aren't verified.</p>
+          <div class="row" style="flex-wrap:wrap; gap:6px;">
+            ${Object.entries(ALT_CRITERIA).map(([key, c]) => `
+              <button class="btn btn-ghost" data-alt-criterion="${esc(key)}" style="padding:6px 14px; min-height:38px; font-size:0.85rem;">${esc(c.label)}</button>`).join('')}
+          </div>
+          <div id="alt-results" style="margin-top:10px;" aria-live="polite"></div>
+        </div>` : `
+        <p class="small muted" style="margin-top:12px;">Verified exact-product suggestions need a database-matched product (scan the barcode) — until then these label-reading strategies apply.</p>`}
       <a class="btn btn-secondary btn-block" href="#/compare/${esc(scan.id)}" style="margin-top:6px;">Compare with another scan</a>
     </section>
 
@@ -401,6 +440,24 @@ export function renderReport(el, scanId, opts = {}) {
 
   el.querySelectorAll('[data-view-profile]').forEach((btn) =>
     btn.addEventListener('click', () => renderReport(el, scanId, { profileId: btn.dataset.viewProfile })));
+
+  el.querySelectorAll('[data-alt-criterion]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      const box = el.querySelector('#alt-results');
+      box.innerHTML = '<p class="small muted"><span class="spinner" style="width:16px;height:16px;border-width:2px;vertical-align:middle;" aria-hidden="true"></span> Searching verified products…</p>';
+      el.querySelectorAll('[data-alt-criterion]').forEach((b) => b.disabled = true);
+      try {
+        const userAllergens = Object.entries(PREF_ALLERGEN_MAP)
+          .filter(([prefKey]) => prefs[prefKey])
+          .map(([, allergen]) => allergen.toLowerCase());
+        const result = await findAlternatives(scan.pipeline.product, btn.dataset.altCriterion, { avoidAllergens: userAllergens });
+        box.innerHTML = renderAltResults(result, btn.dataset.altCriterion);
+      } catch (err) {
+        box.innerHTML = `<p class="small muted">Search failed (${esc(err.message)}). Check your connection and try again — the shopping criteria above still apply.</p>`;
+      } finally {
+        el.querySelectorAll('[data-alt-criterion]').forEach((b) => b.disabled = false);
+      }
+    }));
 
   el.querySelector('#btn-fav').addEventListener('click', () => {
     const nowFav = toggleFavorite(scan.id);

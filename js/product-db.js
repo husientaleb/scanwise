@@ -79,6 +79,7 @@ export function mapOffProduct(off, barcode) {
     ingredientsText: off.ingredients_text_en || off.ingredients_text || '',
     allergensText: (off.allergens_tags || []).map((t) => t.replace(/^en:/, '')).join(', '),
     categoryTags: (off.categories_tags || []).map((t) => t.replace(/^[a-z]{2}:/, '').replace(/-/g, ' ')),
+    categoryTagsRaw: off.categories_tags || [],
     imageUrl: off.image_front_small_url || off.image_url || null,
     nutrition: (() => {
       const sodiumG = perServingRaw('sodium'); // OFF sodium is in grams; convert before rounding

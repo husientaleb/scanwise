@@ -2,7 +2,7 @@
 // network-first with cache fallback so updates land immediately when online
 // and the app still opens offline. Bump CACHE_VERSION on breaking changes.
 
-const CACHE_VERSION = 'scanwise-v3';
+const CACHE_VERSION = 'scanwise-v4';
 
 const APP_SHELL = [
   './',
@@ -32,6 +32,7 @@ const APP_SHELL = [
   './js/assessment.js',
   './js/categories.js',
   './js/claims.js',
+  './js/alternatives.js',
   './js/views/library.js',
   './js/views/landing.js',
   './js/views/home.js',

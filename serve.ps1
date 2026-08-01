@@ -35,6 +35,7 @@ while ($listener.IsListening) {
     $type = $mime[$ext]
     if (-not $type) { $type = 'application/octet-stream' }
     $ctx.Response.ContentType = $type
+    $ctx.Response.Headers.Add('Cache-Control', 'no-cache')
     $ctx.Response.ContentLength64 = $bytes.Length
     $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
   } else {

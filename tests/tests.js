@@ -16,6 +16,7 @@ import { mapOffProduct } from '../js/product-db.js';
 import { detectCategory, thresholdsForCategory, CATEGORIES } from '../js/categories.js';
 import { THRESHOLDS } from '../js/scoring.js';
 import { analyzeClaims } from '../js/claims.js';
+import { improvement, MIN_IMPROVEMENT, ALT_CRITERIA } from '../js/alternatives.js';
 import { DEMO_PRODUCTS } from '../js/demo-data.js';
 import { monthKey, getScanUsage, incrementScanUsage, FREE_SCANS_PER_MONTH } from '../js/store.js';
 import { buildShareText } from '../js/views/report.js';
@@ -395,6 +396,33 @@ test('every category threshold override uses known keys', () => {
       assert(THRESHOLDS[tKey], `${key}.${tKey} matches a real threshold key`);
     }
   }
+});
+
+// ——— alternative-product engine ———
+
+test('improvement math handles both directions and missing data', () => {
+  assertEq(improvement('lower', 10, 5), 0.5, '50% less');
+  assertEq(improvement('higher', 4, 6), 0.5, '50% more');
+  assertEq(improvement('lower', 10, 12), -0.2, 'worse is negative');
+  assertEq(improvement('lower', null, 5), null, 'missing baseline → null, never guessed');
+  assertEq(improvement('lower', 0, 0), null, 'zero baseline not divisible');
+  assert(MIN_IMPROVEMENT >= 0.25, 'spec minimum: 25% better');
+});
+
+test('lessSugar compares like-for-like and distrusts fake zeros', () => {
+  const c = ALT_CRITERIA.lessSugar;
+  const both = c.compare({ addedSugarGrams: 10, sugarsGrams: 12 }, { addedSugarGrams: 4, sugarsGrams: 6 });
+  assertEq(both.fieldName, 'added sugar', 'uses added sugar when both reliable');
+  // Candidate claims 0 added sugar but 55 g total sugars — the classic
+  // unfilled-field artifact. Must fall back to comparing total sugars.
+  const suspicious = c.compare({ addedSugarGrams: 52, sugarsGrams: 56 }, { addedSugarGrams: 0, sugarsGrams: 55 });
+  assertEq(suspicious.fieldName, 'total sugars', 'fake zero → total-sugars comparison');
+  assert(Math.abs((suspicious.baseVal - suspicious.candVal) / suspicious.baseVal) < 0.25, 'and the improvement collapses');
+  // A true zero (0 added, 2 g total) stays trusted.
+  const genuine = c.compare({ addedSugarGrams: 10, sugarsGrams: 12 }, { addedSugarGrams: 0, sugarsGrams: 2 });
+  assertEq(genuine.fieldName, 'added sugar', 'genuine zero remains comparable');
+  assertEq(genuine.candVal, 0, 'zero preserved');
+  assertEq(c.compare({ addedSugarGrams: null, sugarsGrams: null }, { sugarsGrams: 5 }), null, 'no data → no comparison');
 });
 
 // ——— marketing-claim analyzer ———
