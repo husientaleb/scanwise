@@ -9,10 +9,14 @@ import { nutrientLevel } from '../scoring.js';
 import { analyzeProduct } from '../analyzer.js';
 import { computeDimensions } from '../assessment.js';
 import { calculateNutrition } from '../nutrition-calc.js';
+import { analyzeClaims, VERDICT_META } from '../claims.js';
 import {
   getScan, getScans, saveScan, deleteScan, deleteScanImage, toggleFavorite,
-  getPrefs, newId, PREF_ALLERGEN_MAP, PREF_LABELS,
+  getPrefs, newId, PREF_ALLERGEN_MAP, PREF_LABELS, DEFAULT_PREFS,
+  getProfiles, getActiveProfile,
 } from '../store.js';
+import { scoreProduct, THRESHOLDS } from '../scoring.js';
+import { thresholdsForCategory } from '../categories.js';
 import { getDemoProduct } from '../demo-data.js';
 
 /** Analyze a demo product through the real pipeline and open its report. */
@@ -80,11 +84,11 @@ function productIdHtml(scan) {
     </section>`;
 }
 
-/** Multi-dimension assessment card. */
-function dimensionsHtml(scan, prefs) {
+/** Multi-dimension assessment card (uses the viewed profile's recomputed score). */
+function dimensionsHtml(scan, prefs, sd, viewScore) {
   const dims = computeDimensions({
-    analysis: scan.analysis,
-    scoreDetail: scan.scoreDetail,
+    analysis: { ...scan.analysis, overallScore: viewScore ?? scan.analysis.overallScore },
+    scoreDetail: sd || scan.scoreDetail,
     prefs,
     reconciliation: scan.pipeline?.reconciliation || null,
     match: scan.pipeline?.matchAccepted ? scan.pipeline.match : null,
@@ -104,6 +108,31 @@ function dimensionsHtml(scan, prefs) {
           </div>`).join('')}
       </div>
       <p class="small muted" style="margin:10px 0 0;">A product can do well on one dimension and poorly on another — that's the honest picture.</p>
+    </section>`;
+}
+
+/** Marketing-claims check card. */
+function claimsHtml(scan, a) {
+  const claimsText = scan.extracted?.claimsText || '';
+  const claims = analyzeClaims(claimsText, a);
+  if (!claims.length) return '';
+  return `
+    <section class="card" aria-labelledby="claims-title">
+      <h2 id="claims-title">Claims check</h2>
+      <p class="small muted">Front-of-package claims compared with the verified label — what's regulated, what's marketing, and what the numbers actually show.</p>
+      <div class="stack">
+        ${claims.map((c) => {
+          const meta = VERDICT_META[c.verdict] || VERDICT_META.unverifiable;
+          return `
+            <div>
+              <div class="row" style="gap:8px; flex-wrap:wrap;">
+                <strong class="small">“${esc(c.claimText)}”</strong>
+                <span class="badge ${meta.cls}">${esc(meta.label)}</span>
+              </div>
+              <p class="small muted" style="margin:4px 0 0;">${esc(c.note)}</p>
+            </div>`;
+        }).join('')}
+      </div>
     </section>`;
 }
 
@@ -178,7 +207,7 @@ const NUTRIENT_META = [
   ['proteinGrams', 'Protein', 'g', 'g'],
 ];
 
-export function renderReport(el, scanId) {
+export function renderReport(el, scanId, opts = {}) {
   const scan = getScan(scanId);
   if (!scan) {
     el.innerHTML = `
@@ -191,8 +220,20 @@ export function renderReport(el, scanId) {
   }
 
   const a = scan.analysis;
-  const sd = scan.scoreDetail || { adjustments: [], confidence: 'low', confidenceNote: '' };
-  const prefs = getPrefs();
+
+  // Profile lens: the report can be re-interpreted for any family profile.
+  // The stored scan is never modified — scoring is recomputed live from the
+  // stored analysis data with the viewed profile's preferences.
+  const profiles = getProfiles();
+  const viewProfile = profiles.find((p) => p.id === opts.profileId) || getActiveProfile();
+  const prefs = { ...DEFAULT_PREFS, ...viewProfile.prefs };
+  const catThresholds = thresholdsForCategory(a.category?.key || 'general', THRESHOLDS);
+  const sd = scoreProduct(a.nutrition, a.ingredients, prefs, {
+    thresholds: catThresholds,
+    category: a.category || null,
+  });
+  const viewScore = sd.score;
+  const viewLabel = sd.label;
   const nutriCalc = calculateNutrition(a.nutrition);
 
   // Personal allergy/avoidance alerts driven by preferences.
@@ -202,6 +243,14 @@ export function renderReport(el, scanId) {
 
   el.innerHTML = `
     <a href="#/history" class="small">← History</a>
+
+    ${profiles.length > 1 ? `
+      <div class="row" style="flex-wrap:wrap; gap:6px; margin-top:10px;" role="group" aria-label="View report as profile">
+        <span class="small muted" style="flex:none;">Viewing as:</span>
+        ${profiles.map((p) => `
+          <button class="btn ${p.id === viewProfile.id ? 'btn-primary' : 'btn-ghost'}" data-view-profile="${esc(p.id)}"
+                  style="padding:5px 13px; min-height:36px; font-size:0.82rem;">${esc(p.emoji)} ${esc(p.name)}</button>`).join('')}
+      </div>` : ''}
 
     <section class="card" style="margin-top:8px;" aria-labelledby="report-title">
       ${scan.demo ? '<span class="demo-tag">Fictional demo product</span>' : ''}
@@ -220,9 +269,10 @@ export function renderReport(el, scanId) {
       </div>
 
       <div class="row" style="margin-top:16px; gap:16px;">
-        ${scoreRing(a.overallScore)}
+        ${scoreRing(viewScore)}
         <div>
-          ${overallLabelBadge(a.overallLabel)}
+          ${overallLabelBadge(viewLabel)}
+          ${profiles.length > 1 ? `<p class="small muted" style="margin:6px 0 0;">For ${esc(viewProfile.emoji)} ${esc(viewProfile.name)} — switch profiles above to re-read this report.</p>` : ''}
           <p class="small" style="margin:8px 0 6px;">${confidenceBadge(sd.confidence)}</p>
           <p class="small muted" style="margin:0;">${esc(sd.confidenceNote || '')}</p>
         </div>
@@ -233,11 +283,15 @@ export function renderReport(el, scanId) {
     </section>
 
     ${productIdHtml(scan)}
-    ${dimensionsHtml(scan, prefs)}
+    ${dimensionsHtml(scan, prefs, sd, viewScore)}
+    ${claimsHtml(scan, a)}
 
     <section class="card" aria-labelledby="score-why-title">
       <h2 id="score-why-title">Why this score</h2>
-      <p class="small muted">Transparent scoring: every product starts at 7, then visible adjustments are applied.</p>
+      <p class="small muted">Transparent scoring: every product starts at 7, then visible adjustments are applied.${
+        a.category && a.category.key !== 'general'
+          ? ` Judged as <strong>${esc(a.category.label.toLowerCase())}</strong> — thresholds are category-aware, so this product is compared with its own kind.`
+          : ''}</p>
       <div class="stack" style="gap:8px;">
         <div class="row-between"><span>Starting score</span><strong>7.0</strong></div>
         ${sd.adjustments.length === 0 ? '<p class="small muted">No adjustments — not enough label data was available to score meaningfully.</p>' : ''}
@@ -247,7 +301,7 @@ export function renderReport(el, scanId) {
             <strong style="color:${adj.delta < 0 ? 'var(--red)' : 'var(--green-deep)'};">${adj.delta > 0 ? '+' : ''}${adj.delta}</strong>
           </div>`).join('')}
         <div class="row-between" style="border-top:1.5px solid var(--border); padding-top:8px;">
-          <span>Final score</span><strong>${esc(a.overallScore)}/10</strong>
+          <span>Final score</span><strong>${esc(viewScore)}/10</strong>
         </div>
       </div>
     </section>
@@ -344,6 +398,9 @@ export function renderReport(el, scanId) {
   `;
 
   bindIngredientCards(el);
+
+  el.querySelectorAll('[data-view-profile]').forEach((btn) =>
+    btn.addEventListener('click', () => renderReport(el, scanId, { profileId: btn.dataset.viewProfile })));
 
   el.querySelector('#btn-fav').addEventListener('click', () => {
     const nowFav = toggleFavorite(scan.id);

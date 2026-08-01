@@ -78,6 +78,7 @@ export function mapOffProduct(off, barcode) {
     servingSize: off.serving_size || '',
     ingredientsText: off.ingredients_text_en || off.ingredients_text || '',
     allergensText: (off.allergens_tags || []).map((t) => t.replace(/^en:/, '')).join(', '),
+    categoryTags: (off.categories_tags || []).map((t) => t.replace(/^[a-z]{2}:/, '').replace(/-/g, ' ')),
     imageUrl: off.image_front_small_url || off.image_url || null,
     nutrition: (() => {
       const sodiumG = perServingRaw('sodium'); // OFF sodium is in grams; convert before rounding
@@ -102,7 +103,7 @@ export function mapOffProduct(off, barcode) {
 async function fetchOpenFoodFacts(code) {
   const fields = [
     'code', 'product_name', 'brands', 'quantity', 'serving_size',
-    'ingredients_text', 'ingredients_text_en', 'allergens_tags',
+    'categories_tags', 'ingredients_text', 'ingredients_text_en', 'allergens_tags',
     'image_front_small_url', 'image_url', 'nutriments', 'last_modified_t',
   ].join(',');
   const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${fields}`, {

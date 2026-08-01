@@ -9,6 +9,7 @@ import { scoreProduct, nutrientLevel, THRESHOLDS } from './scoring.js';
 import { validateAnalysis, emptyAnalysis } from './schema.js';
 import { parseIngredientTree, flattenIngredientTree } from './ingredient-parser.js';
 import { normalizeIngredientName } from './normalize.js';
+import { detectCategory, thresholdsForCategory } from './categories.js';
 
 /**
  * Flat list of every ingredient and sub-ingredient label name (advisory
@@ -156,9 +157,9 @@ export function parseNutrition(text) {
   return result;
 }
 
-function buildKeyFindings(nutrition, ingredients, allergens) {
+function buildKeyFindings(nutrition, ingredients, allergens, T = THRESHOLDS) {
   const findings = [];
-  const lvl = (k) => nutrientLevel(k, nutrition[k]);
+  const lvl = (k) => nutrientLevel(k, nutrition[k], T);
 
   if (lvl('addedSugarGrams') === 'high') {
     findings.push(`High added sugar: ${nutrition.addedSugarGrams} g per serving. This is a meaningful amount, especially if you eat more than one serving.`);
@@ -197,22 +198,22 @@ function buildKeyFindings(nutrition, ingredients, allergens) {
   return findings.slice(0, 5);
 }
 
-function buildAlternativeGuidance(nutrition, ingredients, prefs = {}) {
+function buildAlternativeGuidance(nutrition, ingredients, prefs = {}, T = THRESHOLDS, categoryLabel = null) {
   const guidance = [];
-  const lvl = (k) => nutrientLevel(k, nutrition[k]);
-  const category = 'a similar product';
+  const lvl = (k) => nutrientLevel(k, nutrition[k], T);
+  const category = categoryLabel ? `another ${categoryLabel.toLowerCase()}` : 'a similar product';
 
   if (lvl('addedSugarGrams') === 'high' || (prefs.lowerSugar && lvl('addedSugarGrams') !== 'low')) {
-    guidance.push(`Look for ${category} with no more than ${THRESHOLDS.addedSugarGrams.moderate} g of added sugar per serving — this one has ${nutrition.addedSugarGrams} g.`);
+    guidance.push(`Look for ${category} with no more than ${T.addedSugarGrams.moderate} g of added sugar per serving — this one has ${nutrition.addedSugarGrams} g.`);
   }
   if (lvl('sodiumMg') === 'high' || (prefs.lowerSodium && lvl('sodiumMg') !== 'low')) {
-    guidance.push(`Compare sodium lines and aim for under ${THRESHOLDS.sodiumMg.moderate} mg per serving; "reduced sodium" versions often cut it by a quarter or more.`);
+    guidance.push(`Compare sodium lines and aim for under ${T.sodiumMg.moderate} mg per serving; "reduced sodium" versions often cut it by a quarter or more.`);
   }
-  if (nutrition.fiberGrams !== null && nutrition.fiberGrams < THRESHOLDS.fiberGrams.good) {
-    guidance.push(`Choose an option with at least ${THRESHOLDS.fiberGrams.good} g of fiber per serving — whole-grain-first ingredient lists are a good signal.`);
+  if (nutrition.fiberGrams !== null && nutrition.fiberGrams < T.fiberGrams.good) {
+    guidance.push(`Choose an option with at least ${T.fiberGrams.good} g of fiber per serving — whole-grain-first ingredient lists are a good signal.`);
   }
   if (prefs.higherProtein && lvl('proteinGrams') !== 'high') {
-    guidance.push(`For your higher-protein goal, look for at least ${THRESHOLDS.proteinGrams.excellent} g of protein per serving.`);
+    guidance.push(`For your higher-protein goal, look for at least ${T.proteinGrams.excellent} g of protein per serving.`);
   }
   if (ingredients.some((i) => i.name === 'Synthetic food dye')) {
     guidance.push('Prefer to skip synthetic dyes? Look for products colored with fruit or vegetable extracts (annatto, turmeric, beet juice) or no color at all.');
@@ -221,7 +222,7 @@ function buildAlternativeGuidance(nutrition, ingredients, prefs = {}) {
     guidance.push('A similar product with a shorter ingredient list will usually be less processed — compare a few labels side by side.');
   }
   if (lvl('saturatedFatGrams') === 'high') {
-    guidance.push(`Look for a version with under ${THRESHOLDS.saturatedFatGrams.moderate} g saturated fat per serving.`);
+    guidance.push(`Look for a version with under ${T.saturatedFatGrams.moderate} g saturated fat per serving.`);
   }
   if (guidance.length === 0) {
     guidance.push('This profile already looks reasonable. If you want to optimize further, compare fiber and added-sugar lines across a few similar products.');
@@ -297,7 +298,11 @@ export function analyzeProduct(input, prefs = {}) {
     limitations.push(`${unknownCount} ingredient${unknownCount > 1 ? 's are' : ' is'} not in the database and shown without an evidence summary.`);
   }
 
-  const scoreDetail = scoreProduct(nutrition, ingredients, prefs);
+  // Category-aware judging: cereal is compared with cereal, soup with soup.
+  const category = detectCategory(productName, input.dbCategoryTags || []);
+  const catThresholds = thresholdsForCategory(category.key, THRESHOLDS);
+
+  const scoreDetail = scoreProduct(nutrition, ingredients, prefs, { thresholds: catThresholds, category });
   const confidenceNum = scoreDetail.confidence === 'high' ? 0.9 : scoreDetail.confidence === 'medium' ? 0.6 : 0.3;
 
   const analysis = {
@@ -308,15 +313,16 @@ export function analyzeProduct(input, prefs = {}) {
     overallScore: scoreDetail.score,
     overallLabel: scoreDetail.label,
     summary: buildSummary(productName.trim(), scoreDetail, nutrition, ingredients, allergens, limitations),
-    keyFindings: buildKeyFindings(nutrition, ingredients, allergens),
+    keyFindings: buildKeyFindings(nutrition, ingredients, allergens, catThresholds),
     ingredients,
     allergens,
     nutrition,
-    alternativeGuidance: buildAlternativeGuidance(nutrition, ingredients, prefs),
+    alternativeGuidance: buildAlternativeGuidance(nutrition, ingredients, prefs, catThresholds, category.key === 'general' ? null : category.label),
     limitations,
     // Extra, schema-compatible metadata (validators ignore unknown keys).
     dietFlags: dietFlags(ingredients),
     advisories: tree.advisories,
+    category,
   };
 
   const check = validateAnalysis(analysis);

@@ -13,6 +13,9 @@ import { statusForScore } from '../js/match-config.js';
 import { reconcileFields, meaningfulConflicts } from '../js/reconcile.js';
 import { calculateNutrition, percentDV, parseServingsPerContainer } from '../js/nutrition-calc.js';
 import { mapOffProduct } from '../js/product-db.js';
+import { detectCategory, thresholdsForCategory, CATEGORIES } from '../js/categories.js';
+import { THRESHOLDS } from '../js/scoring.js';
+import { analyzeClaims } from '../js/claims.js';
 import { DEMO_PRODUCTS } from '../js/demo-data.js';
 import { monthKey, getScanUsage, incrementScanUsage, FREE_SCANS_PER_MONTH } from '../js/store.js';
 import { buildShareText } from '../js/views/report.js';
@@ -359,6 +362,68 @@ test('calculations carry an audit trail', () => {
   const calc = calculateNutrition({ sodiumMg: 460 }, { servingsPerContainer: 2 });
   assert(calc.calculations.some((c) => c.id === 'dv_sodiumMg' && c.result === 20), 'DV calc recorded');
   assert(calc.calculations.some((c) => c.id === 'pkg_sodiumMg' && c.result === 920), 'per-container calc recorded');
+});
+
+// ——— category-aware scoring ———
+
+test('detectCategory finds categories from names and tags', () => {
+  assertEq(detectCategory('Morning Crunch Cereal').key, 'cereal', 'cereal from name');
+  assertEq(detectCategory('Garden Tomato Soup').key, 'soup', 'soup from name');
+  assertEq(detectCategory('Mystery Product').key, 'general', 'default general');
+  assertEq(detectCategory('Choco Thing', ['hazelnut spread']).key, 'spread', 'category from db tags');
+});
+
+test('category thresholds override general bands and change judgments', () => {
+  const soupT = thresholdsForCategory('soup', THRESHOLDS);
+  assertEq(soupT.sodiumMg.high, 600, 'soup sodium band raised');
+  assertEq(soupT.addedSugarGrams.high, THRESHOLDS.addedSugarGrams.high, 'unspecified keys fall back');
+  // 480 mg sodium: high for a general product, moderate for soup.
+  assertEq(nutrientLevel('sodiumMg', 480), 'high', 'general: high');
+  assertEq(nutrientLevel('sodiumMg', 480, soupT), 'moderate', 'soup: moderate');
+});
+
+test('analyzer judges soup sodium by soup norms', () => {
+  const { analysis, scoreDetail } = analyzeProduct(DEMO_PRODUCTS[2]); // Garden Tomato Soup, 480 mg
+  assertEq(analysis.category.key, 'soup', 'category detected');
+  assert(!scoreDetail.adjustments.some((adj) => adj.reason.startsWith('High sodium')), 'no high-sodium penalty under soup norms');
+  assert(scoreDetail.adjustments.some((adj) => adj.reason.startsWith('Moderate sodium')), 'moderate-sodium note instead');
+});
+
+test('every category threshold override uses known keys', () => {
+  for (const [key, def] of Object.entries(CATEGORIES)) {
+    for (const tKey of Object.keys(def.thresholds)) {
+      assert(THRESHOLDS[tKey], `${key}.${tKey} matches a real threshold key`);
+    }
+  }
+});
+
+// ——— marketing-claim analyzer ———
+
+test('claims: "no added sugar" contradicted by the label', () => {
+  const analysis = { nutrition: { addedSugarGrams: 12 }, ingredients: [] };
+  const claims = analyzeClaims('No Added Sugar! All Natural', analysis);
+  const sugar = claims.find((c) => c.id === 'no_added_sugar');
+  assertEq(sugar.verdict, 'contradicted', 'contradicted');
+  const natural = claims.find((c) => c.id === 'natural');
+  assertEq(natural.verdict, 'marketing', 'natural is marketing language');
+});
+
+test('claims: low sodium checked against the regulated 140 mg bar', () => {
+  const ok = analyzeClaims('Low sodium', { nutrition: { sodiumMg: 120 }, ingredients: [] })[0];
+  assertEq(ok.verdict, 'supported', 'meets definition');
+  const bad = analyzeClaims('Low sodium', { nutrition: { sodiumMg: 300 }, ingredients: [] })[0];
+  assertEq(bad.verdict, 'contradicted', 'exceeds definition');
+});
+
+test('claims: gluten-free flagged when a gluten source is listed', () => {
+  const analysis = { nutrition: {}, ingredients: [{ name: 'Barley / malt', rawName: 'malt extract', gluten: true }] };
+  assertEq(analyzeClaims('Gluten-free', analysis)[0].verdict, 'contradicted', 'malt contradicts');
+  assertEq(analyzeClaims('Gluten-free', { nutrition: {}, ingredients: [] })[0].verdict, 'regulated', 'otherwise regulated term');
+});
+
+test('claims: unverifiable when the label lacks the number', () => {
+  const c = analyzeClaims('No added sugar', { nutrition: { addedSugarGrams: null }, ingredients: [] })[0];
+  assertEq(c.verdict, 'unverifiable', 'missing data → unverifiable, not assumed');
 });
 
 // ——— product database mapping ———

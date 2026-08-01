@@ -11,6 +11,7 @@ import { renderPrefs } from './views/prefs.js';
 import { renderPricing } from './views/pricing.js';
 import { renderProfile } from './views/profile.js';
 import { renderLegal } from './views/legal.js';
+import { renderLibrary } from './views/library.js';
 import { hasOnboarded } from './store.js';
 
 // Ephemeral state carried between the scan → review → report steps.
@@ -32,6 +33,7 @@ const routes = [
   { pattern: /^#\/favorites$/, render: () => (el) => renderHistory(el, { favoritesOnly: true }) },
   { pattern: /^#\/compare(?:\/(.*))?$/, render: () => renderCompare },
   { pattern: /^#\/prefs$/, render: () => renderPrefs },
+  { pattern: /^#\/library$/, render: () => renderLibrary },
   { pattern: /^#\/pricing$/, render: () => renderPricing },
   { pattern: /^#\/profile$/, render: () => renderProfile },
   { pattern: /^#\/auth(?:\/(.*))?$/, render: () => renderProfile },
@@ -44,7 +46,7 @@ const NAV_MAP = [
   [/^#\/(history|report|compare)/, 'history'],
   [/^#\/(scan|review)/, 'scan'],
   [/^#\/favorites/, 'favorites'],
-  [/^#\/(profile|prefs|pricing|auth|privacy|terms)/, 'profile'],
+  [/^#\/(profile|prefs|pricing|auth|privacy|terms|library)/, 'profile'],
 ];
 
 function updateNav(hash) {

@@ -4,7 +4,8 @@
 
 const KEYS = {
   scans: 'scanwise.scans.v1',
-  prefs: 'scanwise.prefs.v1',
+  prefs: 'scanwise.prefs.v1',       // legacy single-profile prefs (migrated)
+  profiles: 'scanwise.profiles.v1', // family profiles
   onboarded: 'scanwise.onboarded.v1',
   usage: 'scanwise.usage.v1',
 };
@@ -135,14 +136,92 @@ export function clearAllData() {
   Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
 }
 
-// ——— Preferences ———
+// ——— Family profiles ———
+// One account can hold several profiles (Me, Kid, Grandma…), each with its
+// own preferences. Reports can be re-interpreted per profile instantly.
+
+function defaultProfilesState() {
+  // Migrate legacy single-profile prefs into the first profile.
+  const legacy = read(KEYS.prefs, null);
+  return {
+    activeId: 'p-me',
+    profiles: [
+      { id: 'p-me', name: 'Me', emoji: '🙂', prefs: { ...DEFAULT_PREFS, ...(legacy || {}) } },
+    ],
+  };
+}
+
+export function getProfilesState() {
+  const state = read(KEYS.profiles, null);
+  if (state && Array.isArray(state.profiles) && state.profiles.length) return state;
+  const fresh = defaultProfilesState();
+  write(KEYS.profiles, fresh);
+  return fresh;
+}
+
+function saveProfilesState(state) {
+  write(KEYS.profiles, state);
+}
+
+export function getProfiles() {
+  return getProfilesState().profiles;
+}
+
+export function getActiveProfile() {
+  const state = getProfilesState();
+  return state.profiles.find((p) => p.id === state.activeId) || state.profiles[0];
+}
+
+export function setActiveProfile(id) {
+  const state = getProfilesState();
+  if (state.profiles.some((p) => p.id === id)) {
+    state.activeId = id;
+    saveProfilesState(state);
+  }
+  return getActiveProfile();
+}
+
+export function addProfile(name, emoji = '👤') {
+  const state = getProfilesState();
+  if (state.profiles.length >= 6) return null; // sensible cap
+  const profile = {
+    id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: (name || 'New profile').slice(0, 24),
+    emoji,
+    prefs: { ...DEFAULT_PREFS },
+  };
+  state.profiles.push(profile);
+  state.activeId = profile.id;
+  saveProfilesState(state);
+  return profile;
+}
+
+export function deleteProfile(id) {
+  const state = getProfilesState();
+  if (state.profiles.length <= 1) return false; // always keep one
+  state.profiles = state.profiles.filter((p) => p.id !== id);
+  if (state.activeId === id) state.activeId = state.profiles[0].id;
+  saveProfilesState(state);
+  return true;
+}
+
+export function renameProfile(id, name) {
+  const state = getProfilesState();
+  const p = state.profiles.find((x) => x.id === id);
+  if (p) { p.name = (name || p.name).slice(0, 24); saveProfilesState(state); }
+}
+
+// ——— Preferences (of the active profile) ———
 
 export function getPrefs() {
-  return { ...DEFAULT_PREFS, ...read(KEYS.prefs, {}) };
+  return { ...DEFAULT_PREFS, ...getActiveProfile().prefs };
 }
 
 export function savePrefs(prefs) {
-  write(KEYS.prefs, { ...getPrefs(), ...prefs });
+  const state = getProfilesState();
+  const p = state.profiles.find((x) => x.id === state.activeId) || state.profiles[0];
+  p.prefs = { ...DEFAULT_PREFS, ...p.prefs, ...prefs };
+  saveProfilesState(state);
 }
 
 // ——— Free-plan scan usage ———

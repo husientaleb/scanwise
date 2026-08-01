@@ -76,6 +76,10 @@ export function renderReview(el) {
       <label class="field-label" for="f-brand" style="margin-top:12px;">Brand <span class="muted">(optional)</span></label>
       <input type="text" id="f-brand" value="${esc(extracted.brand)}" placeholder="e.g. Hillside Foods" autocomplete="off" />
 
+      <label class="field-label" for="f-claims" style="margin-top:12px;">Front-of-package claims <span class="muted">(optional)</span></label>
+      <input type="text" id="f-claims" value="${esc(extracted.claimsText || '')}" placeholder='e.g. "No added sugar · High protein · All natural"' autocomplete="off" />
+      <p class="small muted" style="margin:4px 0 0;">ScanWise checks marketing claims against the actual label.</p>
+
       <label class="field-label" for="f-ingredients" style="margin-top:12px;">Ingredient list</label>
       <textarea id="f-ingredients" placeholder="Ingredients: whole grain oats, sugar, salt…">${esc(extracted.ingredientsText)}</textarea>
 
@@ -188,6 +192,7 @@ export function renderReview(el) {
     const input = {
       productName: $('#f-name').value.trim(),
       brand: $('#f-brand').value.trim(),
+      claimsText: $('#f-claims').value.trim(),
       ingredientsText: $('#f-ingredients').value.trim(),
       nutritionText: $('#f-nutrition').value.trim(),
     };
@@ -215,6 +220,7 @@ export function renderReview(el) {
       input.nutritionFill = Object.fromEntries(reconciliation
         .filter((r) => r.selectedSource === 'product_database' && typeof r.selectedValue === 'number')
         .map((r) => [r.field, r.selectedValue]));
+      input.dbCategoryTags = pipe.product.categoryTags || [];
     }
 
     if (!input.ingredientsText && !input.nutritionText) {

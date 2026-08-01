@@ -24,10 +24,12 @@ export const THRESHOLDS = {
   calories: { high: 400 },                       // FDA considers ≥400 kcal/serving high
 };
 
-/** Descriptive level for a nutrition card: 'low' | 'moderate' | 'high' | 'unknown'. */
-export function nutrientLevel(key, value) {
+/** Descriptive level for a nutrition card: 'low' | 'moderate' | 'high' | 'unknown'.
+ *  Pass category-adjusted thresholds as the third argument to judge a product
+ *  against its own category's norms. */
+export function nutrientLevel(key, value, thresholds = THRESHOLDS) {
   if (value === null || value === undefined || Number.isNaN(value)) return 'unknown';
-  const t = THRESHOLDS[key];
+  const t = thresholds[key];
   switch (key) {
     case 'addedSugarGrams':
     case 'sodiumMg':
@@ -63,10 +65,13 @@ export function labelForScore(score) {
  *                              saturatedFatGrams, fiberGrams, proteinGrams } — null = unknown
  * @param {Array}  ingredients analyzer ingredient objects ({ name, category, concernLevel })
  * @param {object} [prefs]     user preferences (see store.js DEFAULT_PREFS)
+ * @param {object} [opts]      { thresholds, category: {key,label} } — category-aware
+ *                             judging (see categories.js); defaults to general bands
  * @returns {{ score:number, label:string, adjustments:Array<{reason:string, delta:number, personalized?:boolean}>,
- *             confidence:'high'|'medium'|'low', confidenceNote:string, missingFields:string[] }}
+ *             confidence:'high'|'medium'|'low', confidenceNote:string, missingFields:string[], category? }}
  */
-export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
+export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}, opts = {}) {
+  const T = opts.thresholds || THRESHOLDS;
   const adjustments = [];
   const add = (reason, delta, personalized = false) => {
     adjustments.push({ reason, delta: Math.round(delta * 10) / 10, personalized });
@@ -77,7 +82,7 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
 
   // --- Added sugar ---
   if (known(n.addedSugarGrams)) {
-    const lvl = nutrientLevel('addedSugarGrams', n.addedSugarGrams);
+    const lvl = nutrientLevel('addedSugarGrams', n.addedSugarGrams, T);
     if (lvl === 'high') add(`High added sugar (${n.addedSugarGrams} g per serving)`, -1.5);
     else if (lvl === 'moderate') add(`Moderate added sugar (${n.addedSugarGrams} g per serving)`, -0.5);
     else if (n.addedSugarGrams === 0) add('No added sugar', +0.5);
@@ -88,7 +93,7 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
 
   // --- Sodium ---
   if (known(n.sodiumMg)) {
-    const lvl = nutrientLevel('sodiumMg', n.sodiumMg);
+    const lvl = nutrientLevel('sodiumMg', n.sodiumMg, T);
     if (lvl === 'high') add(`High sodium (${n.sodiumMg} mg per serving)`, -1);
     else if (lvl === 'moderate') add(`Moderate sodium (${n.sodiumMg} mg per serving)`, -0.3);
     else add('Low sodium', +0.3);
@@ -99,14 +104,14 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
 
   // --- Saturated fat ---
   if (known(n.saturatedFatGrams)) {
-    const lvl = nutrientLevel('saturatedFatGrams', n.saturatedFatGrams);
+    const lvl = nutrientLevel('saturatedFatGrams', n.saturatedFatGrams, T);
     if (lvl === 'high') add(`High saturated fat (${n.saturatedFatGrams} g per serving)`, -1);
     else if (lvl === 'moderate') add(`Moderate saturated fat (${n.saturatedFatGrams} g per serving)`, -0.3);
   }
 
   // --- Fiber ---
   if (known(n.fiberGrams)) {
-    const lvl = nutrientLevel('fiberGrams', n.fiberGrams);
+    const lvl = nutrientLevel('fiberGrams', n.fiberGrams, T);
     if (lvl === 'high') add(`Excellent source of fiber (${n.fiberGrams} g per serving)`, +1);
     else if (lvl === 'moderate') add(`Good source of fiber (${n.fiberGrams} g per serving)`, +0.5);
     if (prefs.higherFiber && lvl === 'high') {
@@ -116,7 +121,7 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
 
   // --- Protein ---
   if (known(n.proteinGrams)) {
-    const lvl = nutrientLevel('proteinGrams', n.proteinGrams);
+    const lvl = nutrientLevel('proteinGrams', n.proteinGrams, T);
     if (lvl === 'high') add(`High protein (${n.proteinGrams} g per serving)`, +1);
     else if (lvl === 'moderate') add(`Good source of protein (${n.proteinGrams} g per serving)`, +0.5);
     if (prefs.higherProtein && lvl === 'high') {
@@ -125,7 +130,7 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
   }
 
   // --- Calories / serving size context ---
-  if (known(n.calories) && n.calories >= THRESHOLDS.calories.high) {
+  if (known(n.calories) && n.calories >= T.calories.high) {
     add(`Calorie-dense serving (${n.calories} kcal)`, -0.5);
   }
 
@@ -204,5 +209,13 @@ export function scoreProduct(nutrition = {}, ingredients = [], prefs = {}) {
   const total = adjustments.reduce((sum, a) => sum + a.delta, 0);
   const score = Math.round(Math.min(10, Math.max(1, BASE_SCORE + total)) * 10) / 10;
 
-  return { score, label: labelForScore(score), adjustments, confidence, confidenceNote, missingFields };
+  return {
+    score,
+    label: labelForScore(score),
+    adjustments,
+    confidence,
+    confidenceNote,
+    missingFields,
+    category: opts.category || null,
+  };
 }

@@ -80,6 +80,16 @@ export function renderHome(el) {
         <a class="btn btn-secondary" href="#/compare">Compare</a>
       </div>
     </section>
+
+    <section class="card">
+      <div class="row-between">
+        <div>
+          <h3 style="margin:0;">Ingredient library</h3>
+          <p class="small muted" style="margin:0;">Browse every ingredient we can explain — with evidence and sources.</p>
+        </div>
+        <a class="btn btn-secondary" href="#/library">Browse</a>
+      </div>
+    </section>
   `;
 
   el.querySelectorAll('[data-demo]').forEach((btn) =>

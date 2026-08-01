@@ -33,7 +33,8 @@ export function renderProfile(el) {
     <section class="card">
       <h2>Settings</h2>
       <div class="stack">
-        <a class="btn btn-ghost btn-block" href="#/prefs">Dietary preferences</a>
+        <a class="btn btn-ghost btn-block" href="#/prefs">Family profiles &amp; preferences</a>
+        <a class="btn btn-ghost btn-block" href="#/library">Ingredient library</a>
         <a class="btn btn-ghost btn-block" href="#/pricing">Plans &amp; pricing</a>
         <a class="btn btn-ghost btn-block" href="#/landing">About ScanWise</a>
       </div>
