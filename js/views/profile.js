@@ -42,7 +42,7 @@ export function renderProfile(el) {
 
     <section class="card">
       <h2>Privacy &amp; data</h2>
-      <p class="small muted">Your scans and photos are stored only on this device. Uploaded images are used solely to read the label text — never for model training unless you explicitly opt in (there is nothing to opt into yet).</p>
+      <p class="small muted">Your scans and photos are stored only on this device. Uploaded images are used solely to read the label text — never for model training. Product data comes in part from <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL).</p>
       <div class="stack">
         <a class="btn btn-ghost btn-block" href="#/privacy">Privacy policy</a>
         <a class="btn btn-ghost btn-block" href="#/terms">Terms of use</a>

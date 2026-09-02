@@ -6,7 +6,7 @@
 // product-match scoring → field-level reconciliation (label wins; database
 // fills gaps; conflicts surfaced).
 
-import { esc, toast, mainConcernOf } from '../ui.js';
+import { esc, toast, mainConcernOf, offAttributionHtml } from '../ui.js';
 import { session } from '../main.js';
 import { analyzeProduct, parseNutrition } from '../analyzer.js';
 import { analyzeWithFallback } from '../ai.js';
@@ -156,6 +156,7 @@ export function renderReview(el) {
           <button type="button" class="btn btn-ghost" id="btn-reject" style="flex:1;">Not my product</button>
         </div>
         ${pipe.accepted ? '<p class="small muted" style="margin:8px 0 0;">Database values will fill blank fields only. Your package label always wins on conflicts, and conflicts are shown in the report.</p>' : ''}
+        ${offAttributionHtml()}
       </div>`;
     $('#btn-accept')?.addEventListener('click', () => { pipe.accepted = true; drawMatchCard(); });
     $('#btn-reject')?.addEventListener('click', () => { pipe.accepted = false; pipe.product = null; pipe.match = null; drawMatchCard(); toast('Database match discarded — analyzing your label only.'); });

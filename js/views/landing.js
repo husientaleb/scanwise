@@ -54,6 +54,7 @@ export function renderLanding(el) {
     <p class="center small muted" style="margin-top:14px;">
       <a href="#/privacy">Privacy</a> · <a href="#/terms">Terms</a> · <a href="#/pricing">Pricing</a>
     </p>
+    <p class="center small muted">Product data from <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL).</p>
   `;
 
   // Mark onboarding as seen once the user enters the app proper.

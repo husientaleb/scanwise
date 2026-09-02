@@ -3,7 +3,7 @@
 import {
   esc, toast, scoreRing, overallLabelBadge, confidenceBadge, levelBadge,
   ingredientCard, bindIngredientCards, disclaimerHtml, ALLERGY_WARNING,
-  formatDate, mainConcernOf,
+  formatDate, mainConcernOf, offAttributionHtml,
 } from '../ui.js';
 import { nutrientLevel } from '../scoring.js';
 import { analyzeProduct } from '../analyzer.js';
@@ -81,6 +81,7 @@ function productIdHtml(scan) {
             pipe.reconciliation.filter((r) => r.selectedSource === 'product_database').map((r) => esc(r.field)).join(', ')}.</p>` : ''}
         ${pipe.product?.nutritionBasis === 'derived_from_100g' ? `
           <p class="small muted" style="margin:0;">Database nutrition was converted from per-100g values using the disclosed serving size (${esc(String(pipe.product.servingGrams))} g) — a calculation, not a label reading.</p>` : ''}
+        ${pipe.product ? offAttributionHtml() : ''}
       </div>
     </section>`;
 }
@@ -137,6 +138,7 @@ function renderAltResults(result, criterionKey) {
           </p>
         </div>`).join('')}
       <p class="small muted" style="margin:0;">Community-verified data (${result.candidateCount} products searched). Availability and prices are unknown; always verify the package in-store, especially for allergies.</p>
+      ${offAttributionHtml()}
     </div>`;
 }
 

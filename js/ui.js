@@ -26,6 +26,13 @@ export const DISCLAIMER_TEXT =
 export const ALLERGY_WARNING =
   'Ingredient lists and manufacturing practices can change. Always verify the package label if you have a food allergy.';
 
+/** ODbL attribution — required wherever Open Food Facts data is shown. */
+export function offAttributionHtml() {
+  return '<p class="small muted" style="margin:8px 0 0;">Product data from ' +
+    '<a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> ' +
+    '(<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>).</p>';
+}
+
 export function disclaimerHtml() {
   return `<p class="disclaimer">${esc(DISCLAIMER_TEXT)}</p>`;
 }
