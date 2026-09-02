@@ -1,4 +1,4 @@
-# ScanWise UX audit & redesign summary
+# Ingrado UX audit & redesign summary
 
 ## Problems found in the previous interface
 
@@ -48,7 +48,7 @@ limitations, and management.
 Allergens / Sweeteners / Additives / Not in database).
 
 **Consumer language** — engine notes are now human ("Analyzed on your device
-with ScanWise's built-in engine"); technical detail moved to the console.
+with Ingrado's built-in engine"); technical detail moved to the console.
 Error copy tells users their text is preserved and what to do next.
 
 ## Still open (future rounds)

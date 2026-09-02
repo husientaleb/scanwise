@@ -19,7 +19,7 @@ export function toast(message, isError = false) {
 }
 
 export const DISCLAIMER_TEXT =
-  'ScanWise provides general educational information and is not medical advice. ' +
+  'Ingrado provides general educational information and is not medical advice. ' +
   'Product formulations and labels can change. Always check the package and consult a ' +
   'qualified professional regarding allergies, medical conditions, pregnancy, or dietary treatment.';
 

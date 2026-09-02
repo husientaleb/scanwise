@@ -91,7 +91,7 @@ export async function analyzeWithFallback(input, image, prefs, localAnalyze, ret
       analysis,
       scoreDetail,
       engine: 'ai',
-      engineNote: 'Read with AI assistance and double-checked against ScanWise\'s format. The score always comes from the transparent ScanWise rubric.',
+      engineNote: 'Read with AI assistance and double-checked against Ingrado\'s format. The score always comes from the transparent Ingrado rubric.',
     };
   } catch (err) {
     // Keep the technical detail in the console for debugging, but never in
@@ -102,7 +102,7 @@ export async function analyzeWithFallback(input, image, prefs, localAnalyze, ret
       analysis,
       scoreDetail,
       engine: 'local',
-      engineNote: 'Analyzed on your device with ScanWise\'s built-in engine.',
+      engineNote: 'Analyzed on your device with Ingrado\'s built-in engine.',
     };
   }
 }

@@ -1,6 +1,6 @@
 {
-  "name": "ScanWise",
-  "short_name": "ScanWise",
+  "name": "Ingrado",
+  "short_name": "Ingrado",
   "description": "Scan a food label and get a clear, balanced explanation of the ingredients and nutrition.",
   "start_url": "./#/home",
   "scope": "./",

@@ -1,6 +1,6 @@
-# ScanWise architecture
+# Ingrado architecture
 
-ScanWise is a consumer product-intelligence platform: today a packaged-food
+Ingrado is a consumer product-intelligence platform: today a packaged-food
 scanner, structured so new product categories (supplements, cosmetics,
 household, pet food…) and new providers (databases, OCR engines, AI models)
 plug in without a rebuild.

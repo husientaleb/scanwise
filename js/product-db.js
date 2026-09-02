@@ -1,5 +1,5 @@
 // product-db.js — verified product lookup with a strict source order:
-//   1. Local ScanWise product cache (localStorage, TTL)
+//   1. Local Ingrado product cache (localStorage, TTL)
 //   2. Open Food Facts API (public, structured, per-barcode)
 //   3. USDA FoodData Central (stub — needs an API key; see .env.example)
 //   4. Licensed database (stub for future configuration)
@@ -27,7 +27,7 @@ function writeCache(cache) {
   } catch { /* quota — cache is best-effort */ }
 }
 
-/** Map an Open Food Facts record to the ScanWise product shape. */
+/** Map an Open Food Facts record to the Ingrado product shape. */
 export function mapOffProduct(off, barcode) {
   if (!off) return null;
   const n = off.nutriments || {};

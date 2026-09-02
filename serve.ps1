@@ -20,7 +20,7 @@ $mime = @{
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
-Write-Host "ScanWise dev server: http://localhost:$Port/ (Ctrl+C to stop)"
+Write-Host "Ingrado dev server: http://localhost:$Port/ (Ctrl+C to stop)"
 
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()

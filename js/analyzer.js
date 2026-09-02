@@ -68,7 +68,7 @@ export function analyzeIngredient(rawName, meta = {}) {
     name: rawName.replace(/\s*\(.*\)\s*/g, '').trim() || rawName,
     category: 'Other',
     purpose: 'Not identified — purpose unknown for this specific ingredient.',
-    plainLanguageExplanation: `"${rawName}" is not in ScanWise's ingredient database yet. An unfamiliar or chemical-sounding name does not by itself mean an ingredient is unsafe — many safe ingredients have technical names.`,
+    plainLanguageExplanation: `"${rawName}" is not in Ingrado's ingredient database yet. An unfamiliar or chemical-sounding name does not by itself mean an ingredient is unsafe — many safe ingredients have technical names.`,
     evidenceSummary: 'No specific evidence summary available for this ingredient.',
     whoShouldPayAttention: 'If you have specific dietary restrictions, verify this ingredient with the manufacturer or a reliable reference.',
     concernLevel: 'unknown',

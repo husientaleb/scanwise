@@ -209,7 +209,7 @@ export function buildShareText(scan) {
   const n = a.nutrition;
   const fmt = (v, unit) => (v === null || v === undefined ? 'n/a' : `${v} ${unit}`);
   const lines = [
-    `ScanWise report — ${a.productName || 'Unnamed product'}${a.brand ? ` (${a.brand})` : ''}${scan.demo ? ' [fictional demo]' : ''}`,
+    `Ingrado report — ${a.productName || 'Unnamed product'}${a.brand ? ` (${a.brand})` : ''}${scan.demo ? ' [fictional demo]' : ''}`,
     `Score: ${a.overallScore}/10 — ${a.overallLabel}`,
     '',
     a.summary,
@@ -225,7 +225,7 @@ export function buildShareText(scan) {
     `sodium ${fmt(n.sodiumMg, 'mg')}, sat fat ${fmt(n.saturatedFatGrams, 'g')}, ` +
     `fiber ${fmt(n.fiberGrams, 'g')}, protein ${fmt(n.proteinGrams, 'g')}`);
   if (a.allergens.length) lines.push(`Major allergens detected: ${a.allergens.join(', ')}`);
-  lines.push('', 'Shared from ScanWise — general educational information, not medical advice. Always check the package label.');
+  lines.push('', 'Shared from Ingrado — general educational information, not medical advice. Always check the package label.');
   return lines.join('\n');
 }
 
@@ -552,7 +552,7 @@ export function renderReport(el, scanId, opts = {}) {
     const text = buildShareText(scan);
     try {
       if (navigator.share) {
-        await navigator.share({ title: `ScanWise: ${scan.productName}`, text });
+        await navigator.share({ title: `Ingrado: ${scan.productName}`, text });
       } else {
         await navigator.clipboard.writeText(text);
         toast('Report copied to clipboard');

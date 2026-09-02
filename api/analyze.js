@@ -11,7 +11,7 @@
 
 const MODEL = 'claude-sonnet-5';
 
-const SYSTEM_PROMPT = `You are the EXPLANATION layer of ScanWise, a consumer food-label app.
+const SYSTEM_PROMPT = `You are the EXPLANATION layer of Ingrado, a consumer food-label app.
 You will receive a photo of a food label and/or user-confirmed label text, and often
 a "retrieved" block containing verified product-database records, reconciled fields,
 and knowledge-base ingredient entries with evidence grades.

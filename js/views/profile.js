@@ -21,7 +21,7 @@ export function renderProfile(el) {
           <p class="small muted" style="margin:0;">${scanCount} scan${scanCount === 1 ? '' : 's'} saved on this device</p>
         </div>
       </div>
-      <p class="small muted" style="margin-top:12px;">You don't need an account to use ScanWise. Create one later to sync your history across devices.</p>
+      <p class="small muted" style="margin-top:12px;">You don't need an account to use Ingrado. Create one later to sync your history across devices.</p>
       <form id="signin-form" class="stack" style="margin-top:6px;">
         <label class="field-label" for="email" style="margin:0;">Email sign-in <span class="muted">(optional)</span></label>
         <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
@@ -36,7 +36,7 @@ export function renderProfile(el) {
         <a class="btn btn-ghost btn-block" href="#/prefs">Family profiles &amp; preferences</a>
         <a class="btn btn-ghost btn-block" href="#/library">Ingredient library</a>
         <a class="btn btn-ghost btn-block" href="#/pricing">Plans &amp; pricing</a>
-        <a class="btn btn-ghost btn-block" href="#/landing">About ScanWise</a>
+        <a class="btn btn-ghost btn-block" href="#/landing">About Ingrado</a>
       </div>
     </section>
 

@@ -26,7 +26,7 @@ export function renderHome(el) {
         </span>
         <div>
           <p class="small muted" style="margin:0;">${greeting()}</p>
-          <h1 style="font-size:1.2rem;margin:0;">ScanWise</h1>
+          <h1 style="font-size:1.2rem;margin:0;">Ingrado</h1>
         </div>
       </div>
       ${profiles.length > 1 ? `
@@ -65,7 +65,7 @@ export function renderHome(el) {
         <div class="progress-bar" role="progressbar" aria-valuenow="${usage.count}" aria-valuemin="0" aria-valuemax="${usage.limit}" aria-label="Monthly scan usage">
           <div class="progress-fill" style="width:${Math.min(100, Math.round((usage.count / usage.limit) * 100))}%"></div>
         </div>
-        ${usage.over ? '<p class="small muted" style="margin:6px 0 0;">You\'ve passed this month\'s free allowance. While billing isn\'t live, scanning stays free — thanks for testing ScanWise!</p>' : ''}
+        ${usage.over ? '<p class="small muted" style="margin:6px 0 0;">You\'ve passed this month\'s free allowance. While billing isn\'t live, scanning stays free — thanks for testing Ingrado!</p>' : ''}
       </div>` : ''}
 
     <section aria-labelledby="recent-title">

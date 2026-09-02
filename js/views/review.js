@@ -57,7 +57,7 @@ export function renderReview(el) {
 
     <section class="card" aria-labelledby="pid-title">
       <h2 id="pid-title" style="font-size:1.05rem;">Identify the exact product <span class="muted small">(optional)</span></h2>
-      <p class="small muted">A barcode lets ScanWise match this product against the Open Food Facts database and fill in anything your photo missed.</p>
+      <p class="small muted">A barcode lets Ingrado match this product against the Open Food Facts database and fill in anything your photo missed.</p>
       <label class="field-label" for="f-barcode">Barcode (UPC/EAN)</label>
       <div class="row">
         <input type="text" id="f-barcode" inputmode="numeric" placeholder="e.g. 038000198817" value="${esc(pipe.barcode?.normalized || '')}" autocomplete="off" style="flex:1;" />
@@ -78,14 +78,14 @@ export function renderReview(el) {
 
       <label class="field-label" for="f-claims" style="margin-top:12px;">Front-of-package claims <span class="muted">(optional)</span></label>
       <input type="text" id="f-claims" value="${esc(extracted.claimsText || '')}" placeholder='e.g. "No added sugar · High protein · All natural"' autocomplete="off" />
-      <p class="small muted" style="margin:4px 0 0;">ScanWise checks marketing claims against the actual label.</p>
+      <p class="small muted" style="margin:4px 0 0;">Ingrado checks marketing claims against the actual label.</p>
 
       <label class="field-label" for="f-ingredients" style="margin-top:12px;">Ingredient list</label>
       <textarea id="f-ingredients" placeholder="Ingredients: whole grain oats, sugar, salt…">${esc(extracted.ingredientsText)}</textarea>
 
       <label class="field-label" for="f-nutrition" style="margin-top:12px;">Nutrition facts <span class="muted">(optional)</span></label>
       <textarea id="f-nutrition" placeholder="Serving size 1 cup (39 g). Calories 150. Sodium 190 mg. Includes 14 g added sugars. Dietary fiber 1 g. Protein 2 g.">${esc(extracted.nutritionText)}</textarea>
-      <p class="small muted" style="margin-top:6px;">Anything left blank is reported as "not available" — ScanWise never fills in numbers it didn't read. If you accept a database match above, the database may fill blank fields (clearly labeled), but it never overrides what your package says.</p>
+      <p class="small muted" style="margin-top:6px;">Anything left blank is reported as "not available" — Ingrado never fills in numbers it didn't read. If you accept a database match above, the database may fill blank fields (clearly labeled), but it never overrides what your package says.</p>
 
       <button type="submit" class="btn btn-primary btn-big btn-block" style="margin-top:14px;" id="analyze-btn">Analyze product</button>
     </form>
@@ -177,7 +177,7 @@ export function renderReview(el) {
     try {
       const result = await lookupProduct(bc.normalized);
       if (!result.product) {
-        status.textContent = `No verified database record found for ${bc.normalized}. ScanWise will analyze the photographed label only — that's fine.`;
+        status.textContent = `No verified database record found for ${bc.normalized}. Ingrado will analyze the photographed label only — that's fine.`;
         pipe.product = null; pipe.match = null; pipe.accepted = false;
         drawMatchCard();
         return;

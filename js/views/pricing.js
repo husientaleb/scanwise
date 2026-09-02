@@ -7,7 +7,7 @@ export function renderPricing(el) {
   el.innerHTML = `
     <a href="#/profile" class="small">← Profile</a>
     <h1 style="margin-top:8px;">Plans</h1>
-    <p class="muted small">ScanWise is free to use. Plus unlocks power features when billing launches.</p>
+    <p class="muted small">Ingrado is free to use. Plus unlocks power features when billing launches.</p>
 
     <div class="plan-card" style="margin-bottom:14px;">
       <h2>Free</h2>
@@ -23,7 +23,7 @@ export function renderPricing(el) {
 
     <div class="plan-card plan-plus">
       <span class="badge badge-green" style="position:absolute;top:-12px;left:18px;">Coming soon</span>
-      <h2>ScanWise Plus</h2>
+      <h2>Ingrado Plus</h2>
       <p class="plan-price">$5.99<span class="small muted">/month</span></p>
       <p class="small muted">or $39.99/year (about 44% off)</p>
       <ul>

@@ -1,4 +1,4 @@
-// scoring.js — ScanWise's transparent scoring utility.
+// scoring.js — Ingrado's transparent scoring utility.
 // Deliberately separate from the analyzer and UI so the rubric can evolve.
 //
 // The score starts at a neutral 7 and applies visible, explainable adjustments

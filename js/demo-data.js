@@ -1,4 +1,4 @@
-// demo-data.js — three FICTIONAL demonstration products so ScanWise can be
+// demo-data.js — three FICTIONAL demonstration products so Ingrado can be
 // fully exercised without a camera or AI API. Each provides the same raw
 // inputs a real scan produces, and is run through the real analyzer pipeline.
 

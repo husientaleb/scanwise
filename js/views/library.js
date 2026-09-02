@@ -46,7 +46,7 @@ export function renderLibrary(el) {
     const shown = all.filter(matches);
     el.innerHTML = `
       <h1>Ingredient library</h1>
-      <p class="muted small">Every entry in ScanWise's knowledge base — the same explanations, evidence grades, and sources your reports use. ${all.length} entries and growing.</p>
+      <p class="muted small">Every entry in Ingrado's knowledge base — the same explanations, evidence grades, and sources your reports use. ${all.length} entries and growing.</p>
 
       <label class="field-label" for="lib-search" style="position:absolute;left:-9999px;">Search ingredients</label>
       <input type="search" id="lib-search" placeholder="Search by name or alias (e.g. lecithin, E322, dye)…" value="${esc(query)}" />

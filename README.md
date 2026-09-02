@@ -1,14 +1,14 @@
-# ScanWise 🥦
+# Ingrado 🥦
 
 **Scan it. Understand it. Choose better.**
 
-ScanWise is a mobile-first web app that helps consumers understand packaged food.
+Ingrado is a mobile-first web app that helps consumers understand packaged food.
 Photograph (or paste) a product's ingredient list and nutrition label, and get a
 clear, balanced, evidence-based report: plain-language ingredient explanations,
 nutrition context, allergen alerts, a transparent 1–10 score, and practical
 guidance for choosing a healthier alternative.
 
-ScanWise deliberately avoids fear-based language. Unfamiliar or synthetic
+Ingrado deliberately avoids fear-based language. Unfamiliar or synthetic
 ingredients are explained, not demonized.
 
 ## Architecture
@@ -69,14 +69,14 @@ Then open `http://localhost:8080/` (app) and `http://localhost:8080/tests/tests.
    (richer AI reading of label photos). Without it the app uses its built-in
    rule-based analyzer and on-device OCR — fully functional.
 3. Optional, later: Supabase (run `supabase/schema.sql`, set the `SUPABASE_*`
-   vars) for accounts + synced history; Stripe for ScanWise Plus billing.
+   vars) for accounts + synced history; Stripe for Ingrado Plus billing.
 
 See `.env.example`. **All keys are server-side only** — nothing secret ships to
 the client.
 
 ## The research pipeline
 
-ScanWise is a staged evidence-retrieval and analysis pipeline, not a single AI
+Ingrado is a staged evidence-retrieval and analysis pipeline, not a single AI
 call. Every report distinguishes: what the package says, what a verified
 database says, what the app calculated, what the AI explained, and what is
 unknown.
@@ -164,7 +164,7 @@ parsing, allergen detection, and end-to-end analysis of the demo products
 
 ## Disclaimer
 
-ScanWise provides general educational information and is not medical advice.
+Ingrado provides general educational information and is not medical advice.
 Product formulations and labels can change. Always check the package and consult
 a qualified professional regarding allergies, medical conditions, pregnancy, or
 dietary treatment.

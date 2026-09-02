@@ -1,4 +1,4 @@
--- ScanWise database schema (Supabase / Postgres).
+-- Ingrado database schema (Supabase / Postgres).
 -- Mirrors the local-storage shapes in js/store.js so guest history can be
 -- synced up when a user creates an account.
 

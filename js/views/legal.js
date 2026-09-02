@@ -15,7 +15,7 @@ export function renderLegal(el, which) {
 
       <section class="card">
         <h2>The short version</h2>
-        <p class="small">ScanWise keeps your data on your device. There are no accounts, no ads, no tracking pixels, and no analytics in this version. The only things that ever leave your phone are the specific lookups you trigger, described below.</p>
+        <p class="small">Ingrado keeps your data on your device. There are no accounts, no ads, no tracking pixels, and no analytics in this version. The only things that ever leave your phone are the specific lookups you trigger, described below.</p>
       </section>
 
       <section class="card">
@@ -61,18 +61,18 @@ export function renderLegal(el, which) {
       <p class="small muted">Last updated: ${LAST_UPDATED}</p>
 
       <section class="card">
-        <h2>What ScanWise is</h2>
-        <p class="small">ScanWise is an educational tool that helps you read packaged-food labels: it explains ingredients, summarizes nutrition numbers, flags potential allergens, and points to public sources. It is not a medical device and provides no medical advice.</p>
+        <h2>What Ingrado is</h2>
+        <p class="small">Ingrado is an educational tool that helps you read packaged-food labels: it explains ingredients, summarizes nutrition numbers, flags potential allergens, and points to public sources. It is not a medical device and provides no medical advice.</p>
       </section>
 
       <section class="card">
         <h2>Accuracy has limits</h2>
-        <p class="small">Reports are built from the text you confirm, community product databases, and a curated ingredient knowledge base. Photo reading can make mistakes, database records can be outdated, and manufacturers change formulations without notice. ScanWise shows its confidence and its sources so you can judge — but the printed package label is always the authority.</p>
+        <p class="small">Reports are built from the text you confirm, community product databases, and a curated ingredient knowledge base. Photo reading can make mistakes, database records can be outdated, and manufacturers change formulations without notice. Ingrado shows its confidence and its sources so you can judge — but the printed package label is always the authority.</p>
       </section>
 
       <section class="card">
         <h2>Allergies</h2>
-        <p class="small">Never rely on ScanWise as your only check for a food allergy. Formulations and manufacturing practices can change. Verify the current package label before consumption, every time. ScanWise never certifies a product as allergen-free or safe.</p>
+        <p class="small">Never rely on Ingrado as your only check for a food allergy. Formulations and manufacturing practices can change. Verify the current package label before consumption, every time. Ingrado never certifies a product as allergen-free or safe.</p>
       </section>
 
       <section class="card">
@@ -87,7 +87,7 @@ export function renderLegal(el, which) {
 
       <section class="card">
         <h2>Acceptable use</h2>
-        <p class="small">Don't use ScanWise output to make medical or safety claims about products, to disparage manufacturers, or to republish database content in violation of its license. The app is provided as-is, without warranties, to the extent permitted by law.</p>
+        <p class="small">Don't use Ingrado output to make medical or safety claims about products, to disparage manufacturers, or to republish database content in violation of its license. The app is provided as-is, without warranties, to the extent permitted by law.</p>
       </section>`;
   }
   el.insertAdjacentHTML('beforeend', disclaimerHtml());
