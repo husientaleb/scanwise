@@ -1,0 +1,8 @@
+﻿[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.ingrado.www.twa",
+        "sha256_cert_fingerprints": ["EC:FD:9A:BF:1C:F2:3C:8C:EE:AF:C3:81:DC:81:87:78:2D:C7:AF:36:11:8C:61:C6:C9:48:4A:0B:78:3C:B7:41"]
+      }
+    }]
