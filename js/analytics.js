@@ -5,10 +5,10 @@
 // page_view per route change, with record ids stripped out of the path so
 // reports group by screen instead of by product.
 //
-// To switch analytics on, paste the GA4 stream's Measurement ID below.
-// While it is empty the app loads no third-party script at all.
+// MEASUREMENT_ID is the GA4 web stream's Measurement ID. Blank it out to
+// turn analytics off entirely: while it is empty no third-party script loads.
 
-const MEASUREMENT_ID = ''; // e.g. 'G-XXXXXXXXXX'
+const MEASUREMENT_ID = 'G-ENVREE81GP';
 
 let ready = false;
 
