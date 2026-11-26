@@ -3,7 +3,6 @@
 import { esc, formatDate, scoreColor } from '../ui.js';
 import { getScans, getScanUsage, getProfiles, getActiveProfile, setActiveProfile } from '../store.js';
 import { DEMO_PRODUCTS } from '../demo-data.js';
-import { runDemoScan } from './report.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -101,7 +100,11 @@ export function renderHome(el) {
   `;
 
   el.querySelectorAll('[data-demo]').forEach((btn) =>
-    btn.addEventListener('click', () => runDemoScan(btn.dataset.demo)));
+    btn.addEventListener('click', async () => {
+      // report.js drags in the whole analysis chain, so it loads on demand.
+      const { runDemoScan } = await import('./report.js');
+      runDemoScan(btn.dataset.demo);
+    }));
 
   el.querySelector('#profile-cycle')?.addEventListener('click', () => {
     const idx = profiles.findIndex((p) => p.id === active.id);
