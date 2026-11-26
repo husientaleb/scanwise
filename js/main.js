@@ -13,6 +13,7 @@ import { renderProfile } from './views/profile.js';
 import { renderLegal } from './views/legal.js';
 import { renderLibrary } from './views/library.js';
 import { hasOnboarded } from './store.js';
+import { initAnalytics, trackPageView } from './analytics.js';
 
 // Ephemeral state carried between the scan → review → report steps.
 export const session = {
@@ -73,6 +74,7 @@ function route() {
       // Landing page hides the app chrome for a cleaner first impression.
       nav.style.display = renderFn === renderLanding ? 'none' : '';
       updateNav(hash);
+      trackPageView(hash);
       app.focus({ preventScroll: true });
       window.scrollTo({ top: 0, behavior: 'instant' });
       return;
@@ -82,6 +84,7 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
+initAnalytics();
 route();
 
 // PWA: register the service worker (secure contexts only; localhost counts).
